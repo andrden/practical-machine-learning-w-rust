@@ -92,7 +92,7 @@ pub fn run() -> Result<(), Box<Error>> {
     let vs = nn::VarStore::new(Device::Cpu);
     let net = Net::new(&vs.root());
     let opt = nn::Adam::default().build(&vs, 1e-3)?;
-    for epoch in 1..200 {
+    for epoch in 1..600 {
             let loss = net
                 .forward(&flower_x_train)
                 .cross_entropy_for_logits(&flower_y_train);
@@ -100,12 +100,14 @@ pub fn run() -> Result<(), Box<Error>> {
             let test_accuracy = net
                 .forward(&flower_x_test)
                 .accuracy_for_logits(&flower_y_test);
-            println!(
-                "epoch: {:4} train loss: {:8.5} test acc: {:5.2}%",
-                epoch,
-                f64::from(&loss),
-                100. * f64::from(&test_accuracy),
-            );
+            if epoch%10==0 {
+                println!(
+                    "epoch: {:4} train loss: {:8.5} test acc: {:5.2}%",
+                    epoch,
+                    f64::from(&loss),
+                    100. * f64::from(&test_accuracy),
+                );
+            }
     };
 
     Ok(())

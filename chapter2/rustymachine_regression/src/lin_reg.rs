@@ -26,6 +26,7 @@ use rusty_machine::learning::SupModel;
 use rand;
 use rand::thread_rng;
 use rand::seq::SliceRandom;
+//use rand::Rnd;
 
 use ml_utils::datasets::get_boston_records_from_file;
 use ml_utils::sup_metrics::r_squared_score;
@@ -72,6 +73,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Train the model
     lin_model.train(&boston_x_train, &boston_y_train);
+    println!("{:?}", lin_model);
 
     // Now we will predict
     let predictions = lin_model.predict(&boston_x_test).unwrap();

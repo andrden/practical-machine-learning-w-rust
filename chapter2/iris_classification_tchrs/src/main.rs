@@ -9,8 +9,15 @@ use std::env::args;
 
 mod simple_nn;
 mod linear_with_sgd;
+mod my1;
+mod my2;
+mod moves15;
 
 fn main() {
+    my1::run();
+    my2::run();
+    moves15::run();
+
     let args: Vec<String> = args().collect();
     let model = if args.len() < 2 {
         None
@@ -18,7 +25,10 @@ fn main() {
         Some(args[1].as_str())
     };
     let res = match model {
-        None => {println!("Run cargo run [nn|linear sdg] to get outputs", ); Ok(())},
+        None => {
+            println!("Run cargo run [nn|linear sdg] to get outputs", );
+            Ok(())
+        }
         Some("nn") => simple_nn::run(),
         Some(_) => linear_with_sgd::run(),
     };

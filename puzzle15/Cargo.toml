@@ -1,0 +1,16 @@
+[package]
+name = "puzzle15"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+tch = "0.1.7"
+rand = "0.7.3"
+
+[dependencies.gtk]
+version = "0.8.1"
+features = ["v3_16"]
+
+[dependencies.gio]
+version = ""
+features = ["v2_44"]

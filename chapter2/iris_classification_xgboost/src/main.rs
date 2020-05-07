@@ -19,6 +19,7 @@ use xgboost::{parameters, DMatrix, Booster};
 use ml_utils::datasets::Flower;
 
 fn main() {
+    println!("start1");
     if let Err(err) = read_csv() {
         println!("{}", err);
         process::exit(1);

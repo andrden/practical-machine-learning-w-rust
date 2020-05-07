@@ -7,7 +7,8 @@ edition = "2018"
 [dependencies]
 csv = "1.1.1"
 #rusty-machine="0.5.4"
-rusty-machine= { path = "../rusty-machine" }
+rusty-machine={ git = "https://github.com/AtheMathmo/rusty-machine.git", rev = "f43da8d" }
+#rusty-machine= { path = "../rusty-machine" }
 serde = "1"
 serde_derive = "1"
 rand = "0.7.0"
