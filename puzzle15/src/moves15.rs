@@ -19,7 +19,10 @@ use std::time::SystemTime;
 use tch::nn::{Optimizer, Adam};
 //use gtk::{Builder, Application, Window, Button};
 use gtk::{Application, ApplicationWindow, Button};
-use self::gtk::{GridBuilder, Builder, Window};
+use self::gtk::{GridBuilder, Builder, Window, Grid};
+use std::sync::Arc;
+use std::borrow::Borrow;
+use std::path::Path;
 
 
 // SIZE=3
@@ -29,6 +32,7 @@ use self::gtk::{GridBuilder, Builder, Window};
 
 const SIZE: usize = 4;
 const CHARS: &str = "0123456789ABCDEFGHIJK";
+const MODEL_STORE_PATH: &str = "puzzle15.ot";
 
 static FEATURE_DIM: i64 = (16/*one-hot*/ * SIZE * SIZE) as i64;
 //static HIDDEN_NODES: i64 = 5000;
@@ -107,6 +111,15 @@ impl Field {
             f.cells[i] = (i + 1) as u8;
         }
         f
+    }
+    fn new_with_cells(cells: [u8; SIZE * SIZE]) -> Field {
+        let mut e = 0;
+        for i in 0..SIZE * SIZE {
+            if cells[i] == 0 {
+                e = i;
+            }
+        }
+        Field { empty: e, cells }
     }
     fn features(&self) -> Vec<f32> {
         //let mut xi: Vec<f32> = (*xyi.0).cells.iter().map(|v| *v as f32).collect();
@@ -372,14 +385,21 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let net = net(&vs.root());
 //    println!("scrambled \n{}", scrambled());
 
-    vs.load("/tmp/puzzle15.ot");
-//     let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
-//     train(opt, &net);
-//     vs.save("/tmp/puzzle15.ot");
+
+    if Path::new(MODEL_STORE_PATH).exists() {
+        vs.load(MODEL_STORE_PATH);
+    } else {
+        println!("training, then saving as {}", MODEL_STORE_PATH);
+        let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
+        train(opt, &net);
+        vs.save(MODEL_STORE_PATH);
+    }
 
     //net.forward(&flower_x_train).print();
     //net.forward(&flower_x_train).argmax1(-1, false).print();
-    solve(net);
+    solve(&net);
+    println!("----GUI-----");
+    main_gui();
     // let mut f = Field::new();
     // println!("field \n{} {:?}", f, f.moves());
     // f.mov(1);
@@ -390,7 +410,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn solve(net: impl Module) {
+fn solve(net: &impl Module) {
     let mut scr = scrambled();
     //let mut rng = rand::thread_rng();
     let seed: [u8; 32] = b"123456789012345678901234567890A-".clone();
@@ -399,7 +419,7 @@ fn solve(net: impl Module) {
     let mut exploredSet = HashSet::new();
     exploredSet.insert(scr.cells);
 
-    for mut i in 0..1500 {
+    for mut i in 0..500 {
         let fwd: Tensor = net.forward(&features(&scr));
         //fwd.print();
         let fwdMax = fwd.argmax(-1, false);
@@ -433,21 +453,20 @@ fn solve(net: impl Module) {
         }
         exploredSet.insert(scr.cells);
     }
-    main_gui();
 }
-
+/*
 struct Gui {
-    application: Application,
+    application: Arc<Application>,
     builder: Builder,
     field: Field,
 }
 
 impl Gui {
     fn new() -> Gui {
-        let application = Application::new(
+        let application = Arc::new(Application::new(
             Some("com.github.gtk-rs.examples.basic"),
             Default::default(),
-        ).expect("failed to initialize GTK application");
+        ).expect("failed to initialize GTK application"));
         let field = Field::new();
 // we bake our glade file into the application code itself
         let glade_src = include_str!("window.glade");
@@ -462,27 +481,28 @@ impl Gui {
     fn init(&self){
 
 
-        self.application.connect_activate(move |_| {
+        self.application.connect_activate( |_| {
 
 // this builder provides access to all components of the defined ui
 
 // glade allows us to get UI elements by id but we need to specify the type
             let window: Window = self.builder.get_object::<Window>("wnd_main").expect("Couldn't get window") as Window;
             window.set_title("Memegen");
-            window.set_application(Some(&self.application));
+            let app:&Application = self.application.borrow();
+            window.set_application(Some(app));
 
-            for i in 0..16 {
-                let bname = format!("b{}", i);
-                let mut btn_save: Button = self.builder.get_object::<Button>(&bname).expect("Couldn't get btn_save");
-                btn_save.set_label(&format!("{}", self.field.cells[i] + 1));
-
-                btn_save.connect_clicked( |_| {
-                    println!("clicked");
-                    let mut b: Button = self.builder.get_object::<Button>("b0").expect("Couldn't get btn_save");
-                    b.set_label("3");
-//btn_save.la
-                });
-            }
+//             for i in 0..16 {
+//                 let bname = format!("b{}", i);
+//                 let mut btn_save: Button = self.builder.get_object::<Button>(&bname).expect("Couldn't get btn_save");
+//                 btn_save.set_label(&format!("{}", self.field.cells[i] + 1));
+//
+//                 btn_save.connect_clicked( |_| {
+//                     println!("clicked");
+//                     let mut b: Button = self.builder.get_object::<Button>("b0").expect("Couldn't get btn_save");
+//                     b.set_label("3");
+// //btn_save.la
+//                 });
+//             }
 //let btnRef = &btn_save;
 // let window = ApplicationWindow::new(app);
 // window.set_title("First GTK+ Program");
@@ -505,8 +525,116 @@ impl Gui {
 
     }
 }
+*/
+
+fn build_ui(application: &gtk::Application) {
+    let mut vs = nn::VarStore::new(Device::Cpu);
+    let net = net(&vs.root());
+    vs.load(MODEL_STORE_PATH);
+
+    let window = gtk::ApplicationWindow::new(application);
+
+    window.set_title("First GTK+ Program");
+    window.set_border_width(10);
+    window.set_position(gtk::WindowPosition::Center);
+    window.set_default_size(350, 70);
+
+    let mut gbuilder: GridBuilder = GridBuilder::new();
+    let grid: Grid = gbuilder.build();
+    let mut buttons: Vec<Button> = Vec::new();
+    for i in 0..16 {
+        let label = if i == 15 { "".to_string() } else { format!("{}", i + 1) };
+        let mut button = gtk::Button::new_with_label(&label);
+        buttons.push(button);
+        //gbuilder = gbuilder.child(&button);
+    }
+    let mut arcBtns = Arc::new(buttons);
+    for i in 0..16i32 {
+        //let label = if i == 15 { "".to_string() } else { format!("{}", i + 1) };
+        //let mut button = gtk::Button::new_with_label(&label);
+        let arcBtnsCopy = arcBtns.clone();
+        let button: &Button = &(&arcBtnsCopy)[i as usize];
+        let arcBtnsCopy2 = arcBtns.clone();
+        button.connect_clicked(move |_| {
+            let mut field = field_from_buttons(&arcBtnsCopy2);
+            let moves = field.moves();
+            let iusize = i as usize;
+            let valid_move = moves.contains(&iusize);
+            println!("Clicked! {} {:?} {}", field, moves, valid_move);
+            if valid_move {
+                field.mov(iusize);
+                println!("Moved {}", field);
+                relabel_buttons(&arcBtnsCopy2, field)
+            }
+            //(&arcBtnsCopy2)[0].set_label("==");
+            //buttons[0].set_label("==");
+        });
+        grid.attach(button, (i % 4) * 50, (i / 4) * 20, 50, 20);
+        //button.set_label("sdf");
+
+        //(&mut arcBtns).push(button);
+        //gbuilder = gbuilder.child(&button);
+    }
+
+    let solve_btn = gtk::Button::new_with_label("Solve");
+    grid.attach(&solve_btn, 50 * 5, 0, 50, 20);
+    let arc_btns_copy3 = arcBtns.clone();
+    solve_btn.connect_clicked(move |_| {
+        let mut field = field_from_buttons(&arc_btns_copy3);
+        let moves = field.moves();
+        println!("Clicked [solve]! {} {:?}", field, moves);
+
+        let fwd: Tensor = net.forward(&features(&field));
+        //fwd.print();
+        let fwdMax = fwd.argmax(-1, false);
+        //fwdMax.print();
+        let pred = fwdMax.double_value(&[0]);
+        println!("Clicked [solve]! {} {:?} pred={}", field, moves, pred);
+        //println!("{} num={} - scrambled; moves={:?} pred={}", scr, i, scr.moves(), pred);
+
+        field.mov(pred as usize);
+        //field.mov(moves[0]);
+        println!("Moved {}", field);
+        relabel_buttons(&arc_btns_copy3, field)
+    });
+
+    //window.add(&button);
+    window.add(&grid);
+
+    window.show_all();
+}
+
+fn relabel_buttons(arcBtnsCopy2: &Arc<Vec<Button>>, mut field: Field) -> () {
+    for j in 0..SIZE * SIZE {
+        let label = if field.cells[j] == 0 { "".to_string() } else { format!("{}", field.cells[j]) };
+        (&arcBtnsCopy2)[j].set_label(&label);
+    }
+}
+
+fn field_from_buttons(buttons: &Vec<Button>) -> Field {
+    let mut cells: [u8; SIZE * SIZE] = [0; SIZE * SIZE];
+    for i in 0..buttons.len() {
+        let label = buttons[i].get_label();
+        let label_str = label.unwrap();
+        if label_str.len() > 0 {
+            cells[i] = label_str.parse::<u8>().unwrap();
+        }
+    }
+    Field::new_with_cells(cells)
+}
 
 fn main_gui() {
-    let gui = Gui::new();
+    println!("{}", Field::new());
 
+    // let gui = Gui::new();
+    let application =
+        gtk::Application::new(Some("com.github.gtk-rs.examples.basic"), Default::default())
+            .expect("Initialization failed...");
+
+    application.connect_activate(|app| {
+        build_ui(app);
+    });
+
+    //application.run(&args().collect::<Vec<_>>());
+    application.run(&[]);
 }
