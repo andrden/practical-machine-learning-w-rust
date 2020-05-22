@@ -37,7 +37,7 @@ const MODEL_STORE_PATH: &str = "puzzle15.ot";
 static FEATURE_DIM: i64 = (16/*one-hot*/ * SIZE * SIZE) as i64;
 //static HIDDEN_NODES: i64 = 5000;
 static HIDDEN_NODES: i64 = 2048;
-//static HIDDEN_NODES2: i64 = 256;
+static HIDDEN_NODES2: i64 = 256;
 // static HIDDEN_NODES3: i64 = 128;
 // 128 - 64 epoch: 140000 train loss:  0.22475 err=13921 rate=88 sec=442
 // 128-128 epoch: 140000 train loss:  0.18137 err=11954 rate=89 sec=491
@@ -68,11 +68,11 @@ fn net(vs: &nn::Path) -> impl Module {
     nn::seq()
         .add(nn::linear(vs / "layer1", FEATURE_DIM, HIDDEN_NODES, Default::default()))
         .add_fn(|xs| xs.relu())
-        // .add(nn::linear(vs / "layer2", HIDDEN_NODES, HIDDEN_NODES2, Default::default()))
-        // .add_fn(|xs| xs.leaky_relu())
+         .add(nn::linear(vs / "layer2", HIDDEN_NODES, HIDDEN_NODES2, Default::default()))
+         .add_fn(|xs| xs.leaky_relu())
         // .add(nn::linear(vs / "layer3", HIDDEN_NODES2, HIDDEN_NODES3, Default::default()))
         // .add_fn(|xs| xs.leaky_relu())
-        .add(nn::linear(vs, HIDDEN_NODES, LABELS, Default::default()))
+        .add(nn::linear(vs, HIDDEN_NODES2, LABELS, Default::default()))
 }
 
 // #[derive(Debug)]
@@ -260,7 +260,7 @@ fn prepare_train_data() -> (Vec<MiniBatch>, i64, Vec<usize>) {
     let mut best_moves = vec![std::usize::MAX];
     let mut exploredSet = HashSet::new();
     exploredSet.insert(fieldInit.cells);
-    for i in 0..300_000 {
+    for i in 0..400_000 {
         if i >= exploredVec.len() {
             break;
         }
@@ -378,7 +378,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
 pub fn run() -> Result<(), Box<dyn Error>> {
     //set_num_threads()
     //tch::Cpu::set_num_threads(4);
-    set_num_interop_threads(4);
+    //set_num_interop_threads(4);
     // working on a linear neural network with SGD
     let mut vs = nn::VarStore::new(Device::Cpu);
     //let net = Net::new(&vs.root());
@@ -429,7 +429,7 @@ fn solve(net: &impl Module) {
         let old_empty = scr.empty;
         let mut moved = scr.mov_if_not_in(pred as usize, &exploredSet);
         if scr.is_done() {
-            println!("DONE!!!! i={}", i);
+            println!("DONE, SOLVED!!!! i={}", i);
             break;
         }
 
