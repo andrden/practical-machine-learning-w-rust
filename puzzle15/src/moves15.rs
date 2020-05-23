@@ -23,6 +23,7 @@ use self::gtk::{GridBuilder, Builder, Window, Grid};
 use std::sync::Arc;
 use std::borrow::Borrow;
 use std::path::Path;
+use crate::field::{Field, SIZE, scrambled};
 
 
 // SIZE=3
@@ -30,8 +31,6 @@ use std::path::Path;
 // epoch: 40000 train loss:  0.02062 err=532 rate=97 sec=388
 
 
-const SIZE: usize = 4;
-const CHARS: &str = "0123456789ABCDEFGHIJK";
 const MODEL_STORE_PATH: &str = "puzzle15.ot";
 
 static FEATURE_DIM: i64 = (16/*one-hot*/ * SIZE * SIZE) as i64;
@@ -68,8 +67,8 @@ fn net(vs: &nn::Path) -> impl Module {
     nn::seq()
         .add(nn::linear(vs / "layer1", FEATURE_DIM, HIDDEN_NODES, Default::default()))
         .add_fn(|xs| xs.relu())
-         .add(nn::linear(vs / "layer2", HIDDEN_NODES, HIDDEN_NODES2, Default::default()))
-         .add_fn(|xs| xs.leaky_relu())
+        .add(nn::linear(vs / "layer2", HIDDEN_NODES, HIDDEN_NODES2, Default::default()))
+        .add_fn(|xs| xs.leaky_relu())
         // .add(nn::linear(vs / "layer3", HIDDEN_NODES2, HIDDEN_NODES3, Default::default()))
         // .add_fn(|xs| xs.leaky_relu())
         .add(nn::linear(vs, HIDDEN_NODES2, LABELS, Default::default()))
@@ -94,149 +93,6 @@ fn net(vs: &nn::Path) -> impl Module {
 //         xs.apply(&self.fc1).relu().apply(&self.fc2)
 //     }
 // }
-
-#[derive(Clone)]
-struct Field {
-    empty: usize,
-    cells: [u8; SIZE * SIZE],
-}
-
-impl Field {
-    fn new() -> Field {
-        let mut f = Field {
-            empty: SIZE * SIZE - 1,
-            cells: [0u8; SIZE * SIZE],
-        };
-        for i in 0..SIZE * SIZE - 1 {
-            f.cells[i] = (i + 1) as u8;
-        }
-        f
-    }
-    fn new_with_cells(cells: [u8; SIZE * SIZE]) -> Field {
-        let mut e = 0;
-        for i in 0..SIZE * SIZE {
-            if cells[i] == 0 {
-                e = i;
-            }
-        }
-        Field { empty: e, cells }
-    }
-    fn features(&self) -> Vec<f32> {
-        //let mut xi: Vec<f32> = (*xyi.0).cells.iter().map(|v| *v as f32).collect();
-        let mut res: Vec<f32> = Vec::new();
-        for i in &self.cells {
-            for j in 0..16 {
-                if j == *i {
-                    res.push(1f32);
-                } else {
-                    res.push(0f32);
-                }
-            }
-            // let mut val = *i;
-            // for _ in 0..4 { // 4 bits
-            //     res.push((val % 2) as f32);
-            //     val = val / 2;
-            // }
-        }
-        res
-    }
-    fn is_done(&self) -> bool {
-        self.cells == Field::new().cells
-    }
-    fn mov(&mut self, pos: usize) {
-        let val = self.cells[pos];
-        assert_eq!(0, self.cells[self.empty]);
-        assert!(self.moves().contains(&pos));
-        self.cells[pos] = 0;
-        self.cells[self.empty] = val;
-        self.empty = pos;
-    }
-    fn mov_if_can(&mut self, pos: usize) -> bool {
-        let val = self.cells[pos];
-        assert_eq!(0, self.cells[self.empty]);
-        if !self.moves().contains(&pos) {
-            println!("CANNOT MOVE!!!");
-            return false;
-        }
-        self.cells[pos] = 0;
-        self.cells[self.empty] = val;
-        self.empty = pos;
-        true
-    }
-    fn mov_if_not_in(&mut self, pos: usize, old: &HashSet<[u8; SIZE * SIZE]>) -> bool {
-        let val = self.cells[pos];
-        assert_eq!(0, self.cells[self.empty]);
-        if !self.moves().contains(&pos) {
-            println!("CANNOT MOVE!!!");
-            return false;
-        }
-        self.cells[pos] = 0;
-        self.cells[self.empty] = val;
-        if (old.contains(&self.cells)) {
-            // undo at once
-            println!("MOVE TO OLD STATE CANCELLED!!!");
-            self.cells[pos] = val;
-            self.cells[self.empty] = 0;
-            return false;
-        }
-        self.empty = pos;
-        true
-    }
-    fn rowCol(pos: usize) -> (usize, usize) {
-        (pos / SIZE, pos % SIZE)
-    }
-    fn moves(&self) -> Vec<usize> {
-        let mut res = Vec::new();
-        let (row, col) = Field::rowCol(self.empty);
-        if col > 0 {
-            res.push(self.empty - 1);
-        }
-        if col < SIZE - 1 {
-            res.push(self.empty + 1);
-        }
-        if row > 0 {
-            res.push(self.empty - SIZE);
-        }
-        if row < SIZE - 1 {
-            res.push(self.empty + SIZE);
-        }
-        res
-    }
-}
-
-impl Display for Field {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for i in 0..SIZE {
-            write!(f, "{}", "|");
-            for j in 0..SIZE {
-                let val = self.cells[i * SIZE + j] as usize;
-                if val == 0 {
-                    f.write_str(" ");
-                } else {
-                    f.write_str(&CHARS[val..val + 1]);
-                }
-            }
-            write!(f, "{}", "|\n");
-        }
-        Ok(())
-    }
-}
-
-fn scrambled() -> Field {
-    //let mut rng =  rand::thread_rng();
-    let seed: [u8; 32] = b"123456789012345678901234567890Ab".clone();
-    let mut rng: StdRng = SeedableRng::from_seed(seed);
-
-    let mut f = Field::new();
-    for i in 0..20000 {
-        let moves = f.moves();
-        let n: usize = rng.gen();
-        let mov = moves[n % moves.len()];
-        f.mov(mov);
-        //println!("scrambling mov={} of={:?} \n{}", mov, moves, f);
-    }
-    f
-}
 
 fn features(f: &Field) -> Tensor {
     //let x_train: Vec<f32> = f.cells.iter().map(|v| *v as f32).collect();
@@ -397,7 +253,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     //net.forward(&flower_x_train).print();
     //net.forward(&flower_x_train).argmax1(-1, false).print();
-    solve(&net);
+    solve(&net, scrambled(), 500);
     println!("----GUI-----");
     main_gui();
     // let mut f = Field::new();
@@ -410,8 +266,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn solve(net: &impl Module) {
-    let mut scr = scrambled();
+fn solve(net: &impl Module, mut scr: Field, max_steps: i32) -> Option<i32> {
     //let mut rng = rand::thread_rng();
     let seed: [u8; 32] = b"123456789012345678901234567890A-".clone();
     let mut rng: StdRng = SeedableRng::from_seed(seed);
@@ -419,7 +274,7 @@ fn solve(net: &impl Module) {
     let mut exploredSet = HashSet::new();
     exploredSet.insert(scr.cells);
 
-    for mut i in 0..500 {
+    for mut i in 0..max_steps {
         let fwd: Tensor = net.forward(&features(&scr));
         //fwd.print();
         let fwdMax = fwd.argmax(-1, false);
@@ -430,7 +285,8 @@ fn solve(net: &impl Module) {
         let mut moved = scr.mov_if_not_in(pred as usize, &exploredSet);
         if scr.is_done() {
             println!("DONE, SOLVED!!!! i={}", i);
-            break;
+            return Some(i + 1);
+            //break;
         }
 
         let mut moves = scr.moves();
@@ -453,6 +309,7 @@ fn solve(net: &impl Module) {
         }
         exploredSet.insert(scr.cells);
     }
+    None
 }
 /*
 struct Gui {
@@ -579,10 +436,19 @@ fn build_ui(application: &gtk::Application) {
     let solve_btn = gtk::Button::new_with_label("Solve");
     grid.attach(&solve_btn, 50 * 5, 0, 50, 20);
     let arc_btns_copy3 = arcBtns.clone();
-    solve_btn.connect_clicked(move |_| {
+    solve_btn.connect_clicked(move |b:&Button| {
+        let solvable = solve(&net, field_from_buttons(&arc_btns_copy3), 50);
+
         let mut field = field_from_buttons(&arc_btns_copy3);
         let moves = field.moves();
-        println!("Clicked [solve]! {} {:?}", field, moves);
+        println!("Clicked [solve]! {} {:?} solvable={:?}", field, moves, solvable);
+        let label = match solvable {
+            Some(i) => format!("Solve-{}", i),
+            _ => "Solve-?".to_string()
+        };
+        //solve_btn.set_label(&label);
+        b.set_label(&label);
+
 
         let fwd: Tensor = net.forward(&features(&field));
         //fwd.print();
@@ -604,7 +470,7 @@ fn build_ui(application: &gtk::Application) {
     window.show_all();
 }
 
-fn relabel_buttons(arcBtnsCopy2: &Arc<Vec<Button>>, mut field: Field) -> () {
+fn relabel_buttons(arcBtnsCopy2: &Arc<Vec<Button>>, field: Field) -> () {
     for j in 0..SIZE * SIZE {
         let label = if field.cells[j] == 0 { "".to_string() } else { format!("{}", field.cells[j]) };
         (&arcBtnsCopy2)[j].set_label(&label);
