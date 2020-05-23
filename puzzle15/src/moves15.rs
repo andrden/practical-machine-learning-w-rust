@@ -36,7 +36,7 @@ const MODEL_STORE_PATH: &str = "puzzle15.ot";
 
 static FEATURE_DIM: i64 = (16/*one-hot*/ * SIZE * SIZE) as i64;
 //static HIDDEN_NODES: i64 = 5000;
-static HIDDEN_NODES: i64 = 2048;
+static HIDDEN_NODES: i64 = 4096;
 static HIDDEN_NODES2: i64 = 256;
 // static HIDDEN_NODES3: i64 = 128;
 // 128 - 64 epoch: 140000 train loss:  0.22475 err=13921 rate=88 sec=442
@@ -260,7 +260,7 @@ fn prepare_train_data() -> (Vec<MiniBatch>, i64, Vec<usize>) {
     let mut best_moves = vec![std::usize::MAX];
     let mut exploredSet = HashSet::new();
     exploredSet.insert(fieldInit.cells);
-    for i in 0..400_000 {
+    for i in 0..500_000 {
         if i >= exploredVec.len() {
             break;
         }
@@ -297,7 +297,7 @@ fn prepare_train_data() -> (Vec<MiniBatch>, i64, Vec<usize>) {
     //println!("{:?}", y_train);
     let train_size = (best_moves.len() - 1) as i64;
     let mut batches = Vec::new();
-    const BATCH_SIZE: i64 = 64; //512 3x3: 700 sec, 94%  rate=93 sec=387
+    const BATCH_SIZE: i64 = 128; //512 3x3: 700 sec, 94%  rate=93 sec=387
 
     // let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
     // let mut rng: StdRng = SeedableRng::from_seed(seed);
@@ -330,7 +330,7 @@ fn prepare_train_data() -> (Vec<MiniBatch>, i64, Vec<usize>) {
 
     let flower_x_train = x.view((train_size, FEATURE_DIM));
     let flower_y_train = y.view(train_size);
-    println!("train size {} threads={},{} CUDA_avail={}", train_size, get_num_threads(), get_num_interop_threads(), tch::Cuda::is_available());
+    println!("train size {} threads={},interop={} CUDA_avail={}", train_size, get_num_threads(), get_num_interop_threads(), tch::Cuda::is_available());
     println!("train size {} batches={}", train_size, batches.len());
 
     (batches, train_size, best_moves)
@@ -378,15 +378,15 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
 pub fn run() -> Result<(), Box<dyn Error>> {
     //set_num_threads()
     //tch::Cpu::set_num_threads(4);
-    //set_num_interop_threads(4);
+    set_num_interop_threads(8);
     // working on a linear neural network with SGD
     let mut vs = nn::VarStore::new(Device::Cpu);
     //let net = Net::new(&vs.root());
     let net = net(&vs.root());
 //    println!("scrambled \n{}", scrambled());
 
-
     if Path::new(MODEL_STORE_PATH).exists() {
+        println!("pre-trained model found in file {}", MODEL_STORE_PATH);
         vs.load(MODEL_STORE_PATH);
     } else {
         println!("training, then saving as {}", MODEL_STORE_PATH);
