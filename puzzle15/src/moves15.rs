@@ -177,8 +177,8 @@ fn prepare_train_data() -> (Vec<MiniBatch>, i64, Vec<usize>) {
         let x = Tensor::of_slice(&x_train_batch[begx..endx]);
         let y = Tensor::of_slice(&y_train_batch[beg..end]).to_kind(Kind::Int64);
 
-        let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM));
-        let flower_y_train = y.view(BATCH_SIZE);
+        let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM)).to_device(Device::cuda_if_available());
+        let flower_y_train = y.view(BATCH_SIZE).to_device(Device::cuda_if_available());
         batches.push(MiniBatch { x: flower_x_train, y: flower_y_train });
     }
     let x = Tensor::of_slice(x_train.as_slice());
@@ -199,7 +199,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     for epoch in 1..=80000 {
         let batch = &batches[epoch % batches.len()];
         let loss = net
-            .forward(&batch.x.to_device(Device::cuda_if_available()))
+            .forward(&batch.x)
             .cross_entropy_for_logits(&batch.y);
         opt.backward_step(&loss);
         // let loss = net
