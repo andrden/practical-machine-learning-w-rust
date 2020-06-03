@@ -199,7 +199,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     for epoch in 1..=80000 {
         let batch = &batches[epoch % batches.len()];
         let loss = net
-            .forward(&batch.x)
+            .forward(&batch.x.to_device(Device::cuda_if_available()))
             .cross_entropy_for_logits(&batch.y);
         opt.backward_step(&loss);
         // let loss = net
