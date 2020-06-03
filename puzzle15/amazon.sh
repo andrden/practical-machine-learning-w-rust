@@ -8,5 +8,6 @@ rustup override set nightly
 env TORCH_CUDA_VERSION=10.1 cargo build --release
 env TORCH_CUDA_VERSION=10.1 cargo run --release
 
-
+nvidia-smi
+# 249 seconds traininng time for 80_000 epochs and BATCH_SIZE = 256
 
