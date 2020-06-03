@@ -1,9 +1,4 @@
 extern crate rand;
-extern crate gtk;
-extern crate gio;
-
-use gtk::prelude::*;
-use gio::prelude::*;
 
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -18,8 +13,6 @@ use self::rand::prelude::*;
 use std::time::SystemTime;
 use tch::nn::{Optimizer, Adam};
 //use gtk::{Builder, Application, Window, Button};
-use gtk::{Application, ApplicationWindow, Button};
-use self::gtk::{GridBuilder, Builder, Window, Grid};
 use std::sync::Arc;
 use std::borrow::Borrow;
 use std::path::Path;
@@ -31,7 +24,7 @@ use crate::field::{Field, SIZE, scrambled};
 // epoch: 40000 train loss:  0.02062 err=532 rate=97 sec=388
 
 
-const MODEL_STORE_PATH: &str = "puzzle15.ot";
+const MODEL_STORE_PATH: &str = "rubik.ot";
 
 static FEATURE_DIM: i64 = (16/*one-hot*/ * SIZE * SIZE) as i64;
 //static HIDDEN_NODES: i64 = 5000;
@@ -236,7 +229,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     //tch::Cpu::set_num_threads(4);
     set_num_interop_threads(8);
     // working on a linear neural network with SGD
-    let mut vs = nn::VarStore::new(Device::cuda_if_available());
+    let mut vs = nn::VarStore::new(Device::Cpu);
     //let net = Net::new(&vs.root());
     let net = net(&vs.root());
 //    println!("scrambled \n{}", scrambled());
@@ -254,15 +247,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     //net.forward(&flower_x_train).print();
     //net.forward(&flower_x_train).argmax1(-1, false).print();
     solve(&net, scrambled(), 500);
-    println!("----GUI-----");
-    main_gui();
-    // let mut f = Field::new();
-    // println!("field \n{} {:?}", f, f.moves());
-    // f.mov(1);
-    //
-    // println!("field \n{}", f);
-    // f.mov(0);
-    // println!("field \n{}", f);
     Ok(())
 }
 
@@ -310,197 +294,4 @@ fn solve(net: &impl Module, mut scr: Field, max_steps: i32) -> Option<i32> {
         exploredSet.insert(scr.cells);
     }
     None
-}
-/*
-struct Gui {
-    application: Arc<Application>,
-    builder: Builder,
-    field: Field,
-}
-
-impl Gui {
-    fn new() -> Gui {
-        let application = Arc::new(Application::new(
-            Some("com.github.gtk-rs.examples.basic"),
-            Default::default(),
-        ).expect("failed to initialize GTK application"));
-        let field = Field::new();
-// we bake our glade file into the application code itself
-        let glade_src = include_str!("window.glade");
-        let builder = Builder::new_from_string(glade_src);
-
-        Gui{
-            application,
-            builder,
-            field
-        }
-    }
-    fn init(&self){
-
-
-        self.application.connect_activate( |_| {
-
-// this builder provides access to all components of the defined ui
-
-// glade allows us to get UI elements by id but we need to specify the type
-            let window: Window = self.builder.get_object::<Window>("wnd_main").expect("Couldn't get window") as Window;
-            window.set_title("Memegen");
-            let app:&Application = self.application.borrow();
-            window.set_application(Some(app));
-
-//             for i in 0..16 {
-//                 let bname = format!("b{}", i);
-//                 let mut btn_save: Button = self.builder.get_object::<Button>(&bname).expect("Couldn't get btn_save");
-//                 btn_save.set_label(&format!("{}", self.field.cells[i] + 1));
-//
-//                 btn_save.connect_clicked( |_| {
-//                     println!("clicked");
-//                     let mut b: Button = self.builder.get_object::<Button>("b0").expect("Couldn't get btn_save");
-//                     b.set_label("3");
-// //btn_save.la
-//                 });
-//             }
-//let btnRef = &btn_save;
-// let window = ApplicationWindow::new(app);
-// window.set_title("First GTK+ Program");
-// window.set_default_size(350, 70);
-
-
-// let grid = GridBuilder::new().build();
-// let button = Button::new_with_label("Click me!");
-// button.connect_clicked(|_| {
-//     println!("Clicked!");
-// });
-// window.add(&button);
-//
-// let button2 = Button::new_with_label("Click me2!");
-// window.add(&button2);
-            window.show_all();
-        });
-
-        self.application.run(&[]);
-
-    }
-}
-*/
-
-fn build_ui(application: &gtk::Application) {
-    let mut vs = nn::VarStore::new(Device::Cpu);
-    let net = net(&vs.root());
-    vs.load(MODEL_STORE_PATH);
-
-    let window = gtk::ApplicationWindow::new(application);
-
-    window.set_title("First GTK+ Program");
-    window.set_border_width(10);
-    window.set_position(gtk::WindowPosition::Center);
-    window.set_default_size(350, 70);
-
-    let mut gbuilder: GridBuilder = GridBuilder::new();
-    let grid: Grid = gbuilder.build();
-    let mut buttons: Vec<Button> = Vec::new();
-    for i in 0..16 {
-        let label = if i == 15 { "".to_string() } else { format!("{}", i + 1) };
-        let mut button = gtk::Button::new_with_label(&label);
-        buttons.push(button);
-        //gbuilder = gbuilder.child(&button);
-    }
-    let mut arcBtns = Arc::new(buttons);
-    for i in 0..16i32 {
-        //let label = if i == 15 { "".to_string() } else { format!("{}", i + 1) };
-        //let mut button = gtk::Button::new_with_label(&label);
-        let arcBtnsCopy = arcBtns.clone();
-        let button: &Button = &(&arcBtnsCopy)[i as usize];
-        let arcBtnsCopy2 = arcBtns.clone();
-        button.connect_clicked(move |_| {
-            let mut field = field_from_buttons(&arcBtnsCopy2);
-            let moves = field.moves();
-            let iusize = i as usize;
-            let valid_move = moves.contains(&iusize);
-            println!("Clicked! {} {:?} {}", field, moves, valid_move);
-            if valid_move {
-                field.mov(iusize);
-                println!("Moved {}", field);
-                relabel_buttons(&arcBtnsCopy2, field)
-            }
-            //(&arcBtnsCopy2)[0].set_label("==");
-            //buttons[0].set_label("==");
-        });
-        grid.attach(button, (i % 4) * 50, (i / 4) * 20, 50, 20);
-        //button.set_label("sdf");
-
-        //(&mut arcBtns).push(button);
-        //gbuilder = gbuilder.child(&button);
-    }
-
-    let solve_btn = gtk::Button::new_with_label("Solve");
-    grid.attach(&solve_btn, 50 * 5, 0, 50, 20);
-    let arc_btns_copy3 = arcBtns.clone();
-    solve_btn.connect_clicked(move |b:&Button| {
-        let solvable = solve(&net, field_from_buttons(&arc_btns_copy3), 50);
-
-        let mut field = field_from_buttons(&arc_btns_copy3);
-        let moves = field.moves();
-        println!("Clicked [solve]! {} {:?} solvable={:?}", field, moves, solvable);
-        let label = match solvable {
-            Some(i) => format!("Solve-{}", i),
-            _ => "Solve-?".to_string()
-        };
-        //solve_btn.set_label(&label);
-        b.set_label(&label);
-
-
-        let fwd: Tensor = net.forward(&features(&field));
-        //fwd.print();
-        let fwdMax = fwd.argmax(-1, false);
-        //fwdMax.print();
-        let pred = fwdMax.double_value(&[0]);
-        println!("Clicked [solve]! {} {:?} pred={}", field, moves, pred);
-        //println!("{} num={} - scrambled; moves={:?} pred={}", scr, i, scr.moves(), pred);
-
-        field.mov(pred as usize);
-        //field.mov(moves[0]);
-        println!("Moved {}", field);
-        relabel_buttons(&arc_btns_copy3, field)
-    });
-
-    //window.add(&button);
-    window.add(&grid);
-
-    window.show_all();
-}
-
-fn relabel_buttons(arcBtnsCopy2: &Arc<Vec<Button>>, field: Field) -> () {
-    for j in 0..SIZE * SIZE {
-        let label = if field.cells[j] == 0 { "".to_string() } else { format!("{}", field.cells[j]) };
-        (&arcBtnsCopy2)[j].set_label(&label);
-    }
-}
-
-fn field_from_buttons(buttons: &Vec<Button>) -> Field {
-    let mut cells: [u8; SIZE * SIZE] = [0; SIZE * SIZE];
-    for i in 0..buttons.len() {
-        let label = buttons[i].get_label();
-        let label_str = label.unwrap();
-        if label_str.len() > 0 {
-            cells[i] = label_str.parse::<u8>().unwrap();
-        }
-    }
-    Field::new_with_cells(cells)
-}
-
-fn main_gui() {
-    println!("{}", Field::new());
-
-    // let gui = Gui::new();
-    let application =
-        gtk::Application::new(Some("com.github.gtk-rs.examples.basic"), Default::default())
-            .expect("Initialization failed...");
-
-    application.connect_activate(|app| {
-        build_ui(app);
-    });
-
-    //application.run(&args().collect::<Vec<_>>());
-    application.run(&[]);
 }

@@ -1,0 +1,124 @@
+andrii_denysenko@instance-1:~$ cat /etc/os-release
+PRETTY_NAME="Debian GNU/Linux 10 (buster)"
+NAME="Debian GNU/Linux"
+VERSION_ID="10"
+VERSION="10 (buster)"
+VERSION_CODENAME=buster
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+andrii_denysenko@instance-1:~$ history
+    1  top
+    2  curl https://sh.rustup.rs -sSf | sh
+    3  id
+    4  git
+    5  apt-get install git
+    6  sudo apt-get install git
+    7  cat /proc/cpuinfo
+    8  git clone https://github.com/andrden/practical-machine-learning-w-rust.git
+    9  ls
+   10  cd practical-machine-learning-w-rust/
+   11  ls
+   12  cd puzzle15/
+   13  cargo run
+   14  nano
+   15  nano ~/.bash_profile
+   16  source $HOME/.cargo/env
+   17  cargo run
+   18  sudo apt install build-essential
+   19  cargo run
+   20  sudo apt install pkg-config
+   21  cargo run
+   22  sudo apt install openssl-dev
+   23  sudo apt install openssl-devel
+   24  apt-cache search openssl
+   25  sudo apt install openssl
+   26  sudo apt install librust-openssl-dev
+   27  cargo run
+   28  sudo apt install gobject-2.0
+   29  cargo run
+   30  sudo apt install cairo-gobject
+   31  apt-cache search gobject
+   32  apt-cache search gobject | more
+   33  apt-cache search gobject | grep -i cairo
+   34  sudo apt install librust-cairo-rs+gobject-sys-dev
+   35  cargo run
+   36  sudo apt install pango
+   37  sudo apt install rustc
+   38  cargo run
+   39  sudo apt install  gdk-pixbuf-2.0
+   40  sudo apt-cache searrch gdk-pixbuf-2.0
+   41  sudo apt-cache search gdk-pixbuf-2.0
+   42  sudo apt-cache search gdk-pixbuf
+   43  sudo apt install librust-gd
+   44  cargo run
+   45  sudo apt install pango
+   46  sudo apt-cache search pango
+   47  sudo apt install librust-pangocairo-dev
+   48  cargo run
+   49  sudo apt-cache search atk
+   50  sudo apt install librust-atk-sys-dev
+   50  sudo apt install librust-atk-sys-dev
+   51  cargo run
+   52  sudo apt-cache search gdk
+   53  sudo apt install librust-gdk-sys-dev
+   54  cargo run
+   55  rustc --explain E0554
+   56  rustup default nightly
+   57  cargo run
+   58  top
+   59  top
+   60  top
+   61  top
+   62  ls
+   63  cd practical-machine-learning-w-rust/
+   64  git pull
+   65  ls
+   66  cd puzzle15/
+   67  ls
+   68  mv puzzle15.ot puzzle15.ot.1
+   69  cargo run
+   70  ll
+   71  ls
+   72  pwd
+   73  top
+   74  ls
+   75  cd practical-machine-learning-w-rust/
+   76  git pull
+   77  cargo run
+   78  ll
+   79  ls
+   80  cd puzzle15/
+   81  cargo run
+   82  ll
+   83  ls
+   84  ls -l
+   85  mv puzzle15.ot puzzle15.ot.2
+   86  cargo run
+   87  history
+   88  history | grep install
+   89  cat /etc/os-release
+   90  history
+andrii_denysenko@instance-1:~$ history | grep install
+    5  apt-get install git
+    6  sudo apt-get install git
+   18  sudo apt install build-essential
+   20  sudo apt install pkg-config
+   22  sudo apt install openssl-dev
+   23  sudo apt install openssl-devel
+   25  sudo apt install openssl
+   26  sudo apt install librust-openssl-dev
+   28  sudo apt install gobject-2.0
+   30  sudo apt install cairo-gobject
+   34  sudo apt install librust-cairo-rs+gobject-sys-dev
+   36  sudo apt install pango
+   37  sudo apt install rustc
+   39  sudo apt install  gdk-pixbuf-2.0
+   43  sudo apt install librust-gd
+   45  sudo apt install pango
+   47  sudo apt install librust-pangocairo-dev
+   50  sudo apt install librust-atk-sys-dev
+   53  sudo apt install librust-gdk-sys-dev
+   88  history | grep install
+   91  history | grep install
