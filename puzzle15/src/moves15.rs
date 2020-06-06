@@ -152,7 +152,7 @@ fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<us
     //println!("{:?}", x_train);
     //let y_train: Vec<f32> = best_moves.iter().skip(1).map(|m| *m as f32).collect();
     //println!("{:?}", y_train);
-    let train_size = (best_moves.len() - 1) as i64;
+    let train_size = xy.len(); // (best_moves.len() - 1) as i64;
     let mut batches = Vec::new();
     const BATCH_SIZE: i64 = 1024; //512 3x3: 700 sec, 94%  rate=93 sec=387
 
