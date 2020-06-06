@@ -193,7 +193,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
 }
 
 fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
-    let (batches, train_size, best_moves) = prepare_train_data(1_900_000);
+    let (batches, train_size, best_moves) = prepare_train_data(4_900_000);
 
     let now = SystemTime::now();
     for epoch in 1..=80000 {
