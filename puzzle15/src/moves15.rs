@@ -145,7 +145,7 @@ fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<us
     let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
     let mut rng: StdRng = SeedableRng::from_seed(seed);
     xy.shuffle(&mut rng);
-    let xy = xy[0..take];
+    let xy = &xy[0..take];
 
     //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.cells.iter().map(|v| *v as f32)).collect();
     //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.features()).collect();
