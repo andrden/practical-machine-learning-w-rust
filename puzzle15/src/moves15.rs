@@ -23,7 +23,7 @@ use self::gtk::{GridBuilder, Builder, Window, Grid};
 use std::sync::Arc;
 use std::borrow::Borrow;
 use std::path::Path;
-use crate::field::{Field, SIZE, scrambled};
+use crate::field::{Field, SIZE, scrambled, example};
 
 
 // SIZE=3
@@ -193,7 +193,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
 }
 
 fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
-    let (batches, train_size, best_moves) = prepare_train_data(900_000);
+    let (batches, train_size, best_moves) = prepare_train_data(1_900_000);
 
     let now = SystemTime::now();
     for epoch in 1..=80000 {
@@ -253,7 +253,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     //net.forward(&flower_x_train).print();
     //net.forward(&flower_x_train).argmax1(-1, false).print();
-    solve(&net, scrambled(), 500);
+    //solve(&net, scrambled(), 500);
+    solve(&net, example(), 3500);
     println!("----GUI-----");
     main_gui();
     // let mut f = Field::new();

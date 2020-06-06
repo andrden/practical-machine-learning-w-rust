@@ -152,3 +152,12 @@ pub fn scrambled() -> Field {
     }
     f
 }
+
+pub fn example() -> Field {
+    //Field::new_with_cells([1,2,3,4, 5,6,7,8, 9,10,11,12, 15,13,14,0]) // solved in 17 moves
+    Field::new_with_cells([
+        15, 14, 8, 12,
+        10, 11, 9, 13,
+        2, 6, 5, 1,
+        3, 7, 4, 0])
+}
