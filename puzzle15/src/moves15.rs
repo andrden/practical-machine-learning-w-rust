@@ -101,7 +101,7 @@ fn features(f: &Field) -> Tensor {
     let x = Tensor::of_slice(x_train.as_slice());
 
     let train_size = 1 as i64;
-    let flower_x_train = x.view((train_size, FEATURE_DIM));
+    let flower_x_train = x.view((train_size, FEATURE_DIM)).to_device(Device::cuda_if_available());
     flower_x_train
 }
 
@@ -184,8 +184,8 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
     let x = Tensor::of_slice(x_train.as_slice());
     let y = Tensor::of_slice(y_train.as_slice()).to_kind(Kind::Int64);
 
-    let flower_x_train = x.view((train_size, FEATURE_DIM));
-    let flower_y_train = y.view(train_size);
+    // let flower_x_train = x.view((train_size, FEATURE_DIM));
+    // let flower_y_train = y.view(train_size);
     println!("train size {} threads={},interop={} CUDA_avail={}", train_size, get_num_threads(), get_num_interop_threads(), tch::Cuda::is_available());
     println!("train size {} batches={}", train_size, batches.len());
 
