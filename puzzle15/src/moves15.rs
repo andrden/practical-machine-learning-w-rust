@@ -111,37 +111,37 @@ struct MiniBatch {
 }
 
 fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
-    let fieldInit = Field::new();
-    let mut exploredVec = vec![fieldInit.clone()];
+    let field_init = Field::new();
+    let mut explored_vec = vec![field_init.clone()];
     let mut best_moves = vec![std::usize::MAX];
-    let mut exploredSet = HashSet::new();
-    exploredSet.insert(fieldInit.cells);
+    let mut explored_set = HashSet::new();
+    explored_set.insert(field_init.cells);
     for i in 0..steps {
-        if i >= exploredVec.len() {
+        if i >= explored_vec.len() {
             break;
         }
-        let f = &exploredVec[i];
-        let mut addVec = Vec::new();
+        let f = &explored_vec[i];
+        let mut add_vec = Vec::new();
         for m in f.moves() {
             let old_empty = f.empty;
             let mut moved = f.clone();
             moved.mov(m);
-            if !exploredSet.contains(&moved.cells) {
-                exploredSet.insert(moved.cells);
-                addVec.push(moved);
+            if !explored_set.contains(&moved.cells) {
+                explored_set.insert(moved.cells);
+                add_vec.push(moved);
                 best_moves.push(old_empty);
             }
         }
-        exploredVec.append(&mut addVec);
+        explored_vec.append(&mut add_vec);
     }
-    println!("vec len {}", exploredVec.len());
+    println!("vec len {}", explored_vec.len());
     //for i in 0..exploredVec.len() {
-    for i in exploredVec.len() - 10..exploredVec.len() {
-        let f = &exploredVec[i];
+    for i in explored_vec.len() - 10..explored_vec.len() {
+        let f = &explored_vec[i];
         println!("{} best move {}", f, best_moves[i]);
     }
 
-    let mut xy: Vec<_> = exploredVec.iter().zip(best_moves.iter()).skip(1).collect();
+    let mut xy: Vec<_> = explored_vec.iter().zip(best_moves.iter()).skip(1).collect();
     let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
     let mut rng: StdRng = SeedableRng::from_seed(seed);
     xy.shuffle(&mut rng);
@@ -152,7 +152,7 @@ fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<us
     //println!("{:?}", x_train);
     //let y_train: Vec<f32> = best_moves.iter().skip(1).map(|m| *m as f32).collect();
     //println!("{:?}", y_train);
-    let train_size = xy.len(); // (best_moves.len() - 1) as i64;
+    let train_size = xy.len() as i64; // (best_moves.len() - 1) as i64;
     let mut batches = Vec::new();
     const BATCH_SIZE: i64 = 1024; //512 3x3: 700 sec, 94%  rate=93 sec=387
 
