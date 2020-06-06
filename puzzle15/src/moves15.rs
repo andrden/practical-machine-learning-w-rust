@@ -110,7 +110,7 @@ struct MiniBatch {
     y: Tensor,
 }
 
-fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
+fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
     let fieldInit = Field::new();
     let mut exploredVec = vec![fieldInit.clone()];
     let mut best_moves = vec![std::usize::MAX];
@@ -145,11 +145,12 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
     let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
     let mut rng: StdRng = SeedableRng::from_seed(seed);
     xy.shuffle(&mut rng);
+    let xy = xy[0..take];
 
     //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.cells.iter().map(|v| *v as f32)).collect();
-    let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.features()).collect();
+    //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.features()).collect();
     //println!("{:?}", x_train);
-    let y_train: Vec<f32> = best_moves.iter().skip(1).map(|m| *m as f32).collect();
+    //let y_train: Vec<f32> = best_moves.iter().skip(1).map(|m| *m as f32).collect();
     //println!("{:?}", y_train);
     let train_size = (best_moves.len() - 1) as i64;
     let mut batches = Vec::new();
@@ -181,8 +182,8 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
         let flower_y_train = y.view(BATCH_SIZE).to_device(Device::cuda_if_available());
         batches.push(MiniBatch { x: flower_x_train, y: flower_y_train });
     }
-    let x = Tensor::of_slice(x_train.as_slice());
-    let y = Tensor::of_slice(y_train.as_slice()).to_kind(Kind::Int64);
+    // let x = Tensor::of_slice(x_train.as_slice());
+    // let y = Tensor::of_slice(y_train.as_slice()).to_kind(Kind::Int64);
 
     // let flower_x_train = x.view((train_size, FEATURE_DIM));
     // let flower_y_train = y.view(train_size);
@@ -193,7 +194,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
 }
 
 fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
-    let (batches, train_size, best_moves) = prepare_train_data(4_900_000);
+    let (batches, train_size, best_moves) = prepare_train_data(4_900_000, 6_000_000);
 
     let now = SystemTime::now();
     for epoch in 1..=80000 {
@@ -437,7 +438,7 @@ fn build_ui(application: &gtk::Application) {
     let solve_btn = gtk::Button::new_with_label("Solve");
     grid.attach(&solve_btn, 50 * 5, 0, 50, 20);
     let arc_btns_copy3 = arcBtns.clone();
-    solve_btn.connect_clicked(move |b:&Button| {
+    solve_btn.connect_clicked(move |b: &Button| {
         let solvable = solve(&net, field_from_buttons(&arc_btns_copy3), 50);
 
         let mut field = field_from_buttons(&arc_btns_copy3);
