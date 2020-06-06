@@ -2,7 +2,7 @@ extern crate gio;
 extern crate gtk;
 extern crate rand;
 
-use std::borrow::Borrow;
+//use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::error::Error;
 //use std::fmt::{Display, Formatter};
@@ -13,17 +13,17 @@ use std::time::SystemTime;
 
 use gio::prelude::*;
 //use gtk::{Builder, Application, Window, Button};
-use gtk::{Application, ApplicationWindow, Button};
+//use gtk::{Application, ApplicationWindow, Button};
 use gtk::prelude::*;
 use rand::Rng;
 use tch;
-use tch::{Device, get_num_interop_threads, get_num_threads, kind, Kind, nn, no_grad, set_num_interop_threads, set_num_threads, Tensor, vision};
+use tch::{Device, get_num_interop_threads, get_num_threads, Kind, nn, set_num_interop_threads, Tensor};
 use tch::{nn::Module, nn::OptimizerConfig};
 use tch::nn::{Adam, Optimizer};
 
-use crate::field::{example, Field, scrambled, SIZE};
+use crate::field::{Field, SIZE, examples};
 
-use self::gtk::{Builder, Grid, GridBuilder, Window};
+use self::gtk::{Grid, GridBuilder, Button};
 use self::rand::prelude::*;
 
 // SIZE=3
@@ -112,6 +112,9 @@ struct MiniBatch {
 
 fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
     let field_init = Field::new();
+    if !field_init.is_solvable() {
+        panic!("not solvable1");
+    }
     let mut explored_vec = vec![field_init.clone()];
     let mut best_moves = vec![std::usize::MAX];
     let mut explored_set = HashSet::new();
@@ -127,6 +130,9 @@ fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<us
             let mut moved = f.clone();
             moved.mov(m);
             if !explored_set.contains(&moved.cells) {
+                if !moved.is_solvable() {
+                    panic!("not solvable");
+                }
                 explored_set.insert(moved.cells);
                 add_vec.push(moved);
                 best_moves.push(old_empty);
@@ -194,7 +200,7 @@ fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<us
 }
 
 fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
-    let (batches, train_size, best_moves) = prepare_train_data(14_900_000, 7_000_000);
+    let (batches, train_size, _best_moves) = prepare_train_data(14_900_000, 7_000_000);
 
     let now = SystemTime::now();
     for epoch in 1..=80000 {
@@ -212,7 +218,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
         //     .accuracy_for_logits(&flower_y_test);
         if epoch % 1000 == 0 {
             //let pred_now = net.forward(&flower_x_train).argmax(-1, false);
-            let mut ok = 0;
+            let ok = 0;
             // for i in 0..(train_size as usize) {
             //     let best = best_moves[i + 1];
             //     let pred = pred_now.double_value(&[i as i64]) as usize;
@@ -244,18 +250,26 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     if Path::new(MODEL_STORE_PATH).exists() {
         println!("pre-trained model found in file {}", MODEL_STORE_PATH);
-        vs.load(MODEL_STORE_PATH);
+        vs.load(MODEL_STORE_PATH)?;
+        println!("pre-trained model loaded from file {}", MODEL_STORE_PATH);
     } else {
         println!("training, then saving as {}", MODEL_STORE_PATH);
-        let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
+        let opt = nn::Adam::default().build(&vs, 1e-3)?;
         train(opt, &net);
-        vs.save(MODEL_STORE_PATH);
+        vs.save(MODEL_STORE_PATH)?;
     }
 
     //net.forward(&flower_x_train).print();
     //net.forward(&flower_x_train).argmax1(-1, false).print();
     //solve(&net, scrambled(), 500);
-    solve(&net, example(), 3500);
+    for example in examples() {
+        println!("");
+        if example.is_solvable() {
+            solve(&net, example, 3500, false);
+        } else {
+            println!("{} example not solvable", example);
+        }
+    }
     println!("----GUI-----");
     main_gui();
     // let mut f = Field::new();
@@ -268,25 +282,36 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn solve(net: &impl Module, mut scr: Field, max_steps: i32) -> Option<i32> {
+fn solve(net: &impl Module, mut scr: Field, max_steps: i32, verbose: bool) -> Option<i32> {
+    if !verbose {
+        println!("{} to be solved: ", scr);
+    }
     //let mut rng = rand::thread_rng();
     let seed: [u8; 32] = b"123456789012345678901234567890A-".clone();
     let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-    let mut exploredSet = HashSet::new();
-    exploredSet.insert(scr.cells);
+    let mut explored_set = HashSet::new();
+    explored_set.insert(scr.cells);
+    let mut err_loop = 0;
+    let mut err_revisit = 0;
 
-    for mut i in 0..max_steps {
+    for i in 0..max_steps {
+        if !scr.is_solvable() {
+            println!("not solvable \n{}", scr);
+            panic!("not solvable scrambled");
+        }
         let fwd: Tensor = net.forward(&features(&scr));
         //fwd.print();
-        let fwdMax = fwd.argmax(-1, false);
-        //fwdMax.print();
-        let pred = fwdMax.double_value(&[0]);
-        println!("{} num={} - scrambled; moves={:?} pred={}", scr, i, scr.moves(), pred);
-        let old_empty = scr.empty;
-        let mut moved = scr.mov_if_not_in(pred as usize, &exploredSet);
+        let fwd_max = fwd.argmax(-1, false);
+        //fwd_max.print();
+        let pred = fwd_max.double_value(&[0]);
+        if verbose {
+            println!("{} num={} - scrambled; moves={:?} pred={}", scr, i, scr.moves(), pred);
+        }
+        //let old_empty = scr.empty;
+        let mut moved = scr.mov_if_not_in(pred as usize, &explored_set, verbose);
         if scr.is_done() {
-            println!("DONE, SOLVED!!!! i={}", i);
+            println!("DONE, SOLVED!!!! i={} err_loop={} err_revisit={}", i, err_loop, err_revisit);
             return Some(i + 1);
             //break;
         }
@@ -299,18 +324,25 @@ fn solve(net: &impl Module, mut scr: Field, max_steps: i32) -> Option<i32> {
             //     moves = scr.moves();
             // }
             let mov = moves[rng.gen::<usize>() % moves.len()];
-            println!("LOOP doing move {}", mov);
-            moved = scr.mov_if_not_in(mov, &exploredSet);
+            err_loop += 1;
+            if verbose {
+                println!("LOOP doing move {}", mov);
+            }
+            moved = scr.mov_if_not_in(mov, &explored_set, verbose);
             moves.remove_item(&mov);
         }
-        if (!moved) {
-            let mut moves = scr.moves();
+        if !moved {
+            let moves = scr.moves();
             let mov = moves[rng.gen::<usize>() % moves.len()];
-            println!("MOVE TO REPEATED STATE!!!!! {}", mov);
+            err_revisit += 1;
+            if verbose {
+                println!("MOVE TO REPEATED STATE!!!!! {}", mov);
+            }
             scr.mov(mov);
         }
-        exploredSet.insert(scr.cells);
+        explored_set.insert(scr.cells);
     }
+    println!("FAILED TO SOLVE i={} err_loop={} err_revisit={}", max_steps, err_loop, err_revisit);
     None
 }
 /*
@@ -389,7 +421,9 @@ impl Gui {
 fn build_ui(application: &gtk::Application) {
     let mut vs = nn::VarStore::new(Device::Cpu);
     let net = net(&vs.root());
-    vs.load(MODEL_STORE_PATH);
+    if let Ok(_) = vs.load(MODEL_STORE_PATH) {} else {
+        panic!("build_ui vs.load");
+    }
 
     let window = gtk::ApplicationWindow::new(application);
 
@@ -398,24 +432,24 @@ fn build_ui(application: &gtk::Application) {
     window.set_position(gtk::WindowPosition::Center);
     window.set_default_size(350, 70);
 
-    let mut gbuilder: GridBuilder = GridBuilder::new();
+    let gbuilder: GridBuilder = GridBuilder::new();
     let grid: Grid = gbuilder.build();
     let mut buttons: Vec<Button> = Vec::new();
     for i in 0..16 {
         let label = if i == 15 { "".to_string() } else { format!("{}", i + 1) };
-        let mut button = gtk::Button::new_with_label(&label);
+        let button = gtk::Button::new_with_label(&label);
         buttons.push(button);
         //gbuilder = gbuilder.child(&button);
     }
-    let mut arcBtns = Arc::new(buttons);
+    let arc_btns = Arc::new(buttons);
     for i in 0..16i32 {
         //let label = if i == 15 { "".to_string() } else { format!("{}", i + 1) };
         //let mut button = gtk::Button::new_with_label(&label);
-        let arcBtnsCopy = arcBtns.clone();
-        let button: &Button = &(&arcBtnsCopy)[i as usize];
-        let arcBtnsCopy2 = arcBtns.clone();
+        let arc_btns_copy = arc_btns.clone();
+        let button: &Button = &(&arc_btns_copy)[i as usize];
+        let arc_btns_copy2 = arc_btns.clone();
         button.connect_clicked(move |_| {
-            let mut field = field_from_buttons(&arcBtnsCopy2);
+            let mut field = field_from_buttons(&arc_btns_copy2);
             let moves = field.moves();
             let iusize = i as usize;
             let valid_move = moves.contains(&iusize);
@@ -423,23 +457,23 @@ fn build_ui(application: &gtk::Application) {
             if valid_move {
                 field.mov(iusize);
                 println!("Moved {}", field);
-                relabel_buttons(&arcBtnsCopy2, field)
+                relabel_buttons(&arc_btns_copy2, field)
             }
-            //(&arcBtnsCopy2)[0].set_label("==");
+            //(&arc_btns_copy2)[0].set_label("==");
             //buttons[0].set_label("==");
         });
         grid.attach(button, (i % 4) * 50, (i / 4) * 20, 50, 20);
         //button.set_label("sdf");
 
-        //(&mut arcBtns).push(button);
+        //(&mut arc_btns).push(button);
         //gbuilder = gbuilder.child(&button);
     }
 
     let solve_btn = gtk::Button::new_with_label("Solve");
     grid.attach(&solve_btn, 50 * 5, 0, 50, 20);
-    let arc_btns_copy3 = arcBtns.clone();
+    let arc_btns_copy3 = arc_btns.clone();
     solve_btn.connect_clicked(move |b: &Button| {
-        let solvable = solve(&net, field_from_buttons(&arc_btns_copy3), 50);
+        let solvable = solve(&net, field_from_buttons(&arc_btns_copy3), 50, true);
 
         let mut field = field_from_buttons(&arc_btns_copy3);
         let moves = field.moves();
@@ -454,9 +488,9 @@ fn build_ui(application: &gtk::Application) {
 
         let fwd: Tensor = net.forward(&features(&field));
         //fwd.print();
-        let fwdMax = fwd.argmax(-1, false);
-        //fwdMax.print();
-        let pred = fwdMax.double_value(&[0]);
+        let fwd_max = fwd.argmax(-1, false);
+        //fwd_max.print();
+        let pred = fwd_max.double_value(&[0]);
         println!("Clicked [solve]! {} {:?} pred={}", field, moves, pred);
         //println!("{} num={} - scrambled; moves={:?} pred={}", scr, i, scr.moves(), pred);
 
@@ -472,10 +506,10 @@ fn build_ui(application: &gtk::Application) {
     window.show_all();
 }
 
-fn relabel_buttons(arcBtnsCopy2: &Arc<Vec<Button>>, field: Field) -> () {
+fn relabel_buttons(arc_btns_copy2: &Arc<Vec<Button>>, field: Field) -> () {
     for j in 0..SIZE * SIZE {
         let label = if field.cells[j] == 0 { "".to_string() } else { format!("{}", field.cells[j]) };
-        (&arcBtnsCopy2)[j].set_label(&label);
+        (&arc_btns_copy2)[j].set_label(&label);
     }
 }
 

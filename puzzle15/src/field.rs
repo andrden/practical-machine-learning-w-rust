@@ -66,30 +66,35 @@ impl Field {
         self.cells[self.empty] = val;
         self.empty = pos;
     }
-    pub fn mov_if_can(&mut self, pos: usize) -> bool {
+    // pub fn mov_if_can(&mut self, pos: usize) -> bool {
+    //     let val = self.cells[pos];
+    //     assert_eq!(0, self.cells[self.empty]);
+    //     if !self.moves().contains(&pos) {
+    //         println!("CANNOT MOVE!!!");
+    //         return false;
+    //     }
+    //     self.cells[pos] = 0;
+    //     self.cells[self.empty] = val;
+    //     self.empty = pos;
+    //     true
+    // }
+
+    pub fn mov_if_not_in(&mut self, pos: usize, old: &HashSet<[u8; SIZE * SIZE]>, verbose: bool) -> bool {
         let val = self.cells[pos];
         assert_eq!(0, self.cells[self.empty]);
         if !self.moves().contains(&pos) {
-            println!("CANNOT MOVE!!!");
+            if verbose {
+                println!("CANNOT MOVE!!!");
+            }
             return false;
         }
         self.cells[pos] = 0;
         self.cells[self.empty] = val;
-        self.empty = pos;
-        true
-    }
-    pub fn mov_if_not_in(&mut self, pos: usize, old: &HashSet<[u8; SIZE * SIZE]>) -> bool {
-        let val = self.cells[pos];
-        assert_eq!(0, self.cells[self.empty]);
-        if !self.moves().contains(&pos) {
-            println!("CANNOT MOVE!!!");
-            return false;
-        }
-        self.cells[pos] = 0;
-        self.cells[self.empty] = val;
-        if (old.contains(&self.cells)) {
+        if old.contains(&self.cells) {
             // undo at once
-            println!("MOVE TO OLD STATE CANCELLED!!!");
+            if verbose {
+                println!("MOVE TO OLD STATE CANCELLED!!!");
+            }
             self.cells[pos] = val;
             self.cells[self.empty] = 0;
             return false;
@@ -97,12 +102,14 @@ impl Field {
         self.empty = pos;
         true
     }
-    fn rowCol(pos: usize) -> (usize, usize) {
+
+    fn row_col(pos: usize) -> (usize, usize) {
         (pos / SIZE, pos % SIZE)
     }
+
     pub fn moves(&self) -> Vec<usize> {
         let mut res = Vec::new();
-        let (row, col) = Field::rowCol(self.empty);
+        let (row, col) = Field::row_col(self.empty);
         if col > 0 {
             res.push(self.empty - 1);
         }
@@ -117,21 +124,87 @@ impl Field {
         }
         res
     }
+
+    // fn get_inv_count(&self) -> i32 {
+    //     let mut inv_count = 0;
+    //     for i in 0..SIZE * SIZE {
+    //         for j in (i+1)..SIZE * SIZE {
+    //             // count pairs(i, j) such that i appears
+    //             // before j, but i > j.
+    //             // let mut vi = self.cells[i];
+    //             // if vi==0 {
+    //             //     vi = (SIZE*SIZE) as u8;
+    //             // }
+    //             // let mut vj = self.cells[j];
+    //             // if vj==0 {
+    //             //     vj = (SIZE*SIZE) as u8;
+    //             // }
+    //
+    //             if self.cells[j] != 0 && self.cells[i] != 0 && self.cells[i] > self.cells[j] {
+    //                 inv_count += 1;
+    //             }
+    //         }
+    //     }
+    //     inv_count
+    // }
+
+    fn get_inv_count(&self) -> i32 {
+        let mut inv_count = 0;
+        for i in 0..SIZE * SIZE {
+            for j in (i + 1)..SIZE * SIZE {
+                // count pairs(i, j) such that i appears
+                // before j, but i > j.
+                let mut vi = self.cells[i];
+                if vi == 0 {
+                    vi = (SIZE * SIZE) as u8;
+                }
+                let mut vj = self.cells[j];
+                if vj == 0 {
+                    vj = (SIZE * SIZE) as u8;
+                }
+
+                if vi > vj {
+                    inv_count += 1;
+                }
+            }
+        }
+        inv_count
+    }
+
+    // find Position of blank from bottom
+    // fn find_x_position(&self) -> usize {
+    //     SIZE - (self.empty % SIZE)
+    // }
+
+    fn taxicab_space_distance(&self) -> usize {
+        SIZE - 1 - (self.empty % SIZE) + SIZE - 1 - self.empty / SIZE
+    }
+
+    // This function returns true if given
+    // instance of N*N - 1 puzzle is solvable
+    pub fn is_solvable(&self) -> bool {
+        // Count inversions in given puzzle
+        let inv_count = self.get_inv_count();
+
+        //let pos = self.find_x_position();
+        //(pos + inv_count as usize) % 2 == 0
+        (self.taxicab_space_distance() + inv_count as usize) % 2 == 0
+    }
 }
 
 impl Display for Field {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for i in 0..SIZE {
-            write!(f, "{}", "|");
+            write!(f, "{}", "|")?;
             for j in 0..SIZE {
                 let val = self.cells[i * SIZE + j] as usize;
                 if val == 0 {
-                    f.write_str(" ");
+                    f.write_str(" ")?;
                 } else {
-                    f.write_str(&CHARS[val..val + 1]);
+                    f.write_str(&CHARS[val..val + 1])?;
                 }
             }
-            write!(f, "{}", "|\n");
+            write!(f, "{}", "|\n")?;
         }
         Ok(())
     }
@@ -143,7 +216,7 @@ pub fn scrambled() -> Field {
     let mut rng: StdRng = SeedableRng::from_seed(seed);
 
     let mut f = Field::new();
-    for i in 0..20000 {
+    for _i in 0..20000 {
         let moves = f.moves();
         let n: usize = rng.gen();
         let mov = moves[n % moves.len()];
@@ -153,16 +226,27 @@ pub fn scrambled() -> Field {
     f
 }
 
-pub fn example() -> Field {
-    //Field::new_with_cells([1,2,3,4, 5,6,7,8, 9,10,11,12, 15,13,14,0]) // solved in 17 moves
-    // Field::new_with_cells([
-    //     15, 14, 8, 12,
-    //     10, 11, 9, 13,
-    //     2, 6, 5, 1,
-    //     3, 7, 4, 0])
-    Field::new_with_cells([
-        15, 14, 8, 12,
-        10, 11, 9, 13,
-        2, 6, 5, 1,
-        3, 7, 4, 0])
+pub fn examples() -> Vec<Field> {
+    vec![
+        scrambled(), // solved in 187 steps
+        Field::new_with_cells([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 13, 14, 0]), // solved in 17 moves
+        Field::new_with_cells([ //- unsolvable, broken?
+            15, 14, 8, 12,
+            10, 11, 9, 13,
+            2, 6, 5, 1,
+            3, 7, 4, 0]),
+        Field::new_with_cells([ // solved in 119 moves
+            14, 15, 8, 12,
+            10, 11, 9, 13,
+            2, 6, 5, 1,
+            3, 7, 4, 0]),
+        Field::new_with_cells([ // solved in 201 moves,   https://www.jaapsch.net/puzzles/javascript/fifteenj.htm solves it in 184 (or 194) moves
+            0, 12, 10, 13,
+            15, 11, 14, 9,
+            7, 8, 6, 2,
+            4, 3, 5, 1])]
+    // if !res.is_solvable() {
+    //     panic!("not solvable example()")
+    // }
+    // res
 }
