@@ -1,30 +1,30 @@
-extern crate rand;
-extern crate gtk;
 extern crate gio;
+extern crate gtk;
+extern crate rand;
 
-use gtk::prelude::*;
-use gio::prelude::*;
-
-use std::error::Error;
-use std::fmt::{Display, Formatter};
-use std::fmt;
+use std::borrow::Borrow;
 use std::collections::HashSet;
-
-use tch;
-use tch::{nn, kind, Kind, Tensor, no_grad, vision, Device, set_num_threads, get_num_threads, get_num_interop_threads, set_num_interop_threads};
-use tch::{nn::Module, nn::OptimizerConfig};
-use rand::Rng;
-use self::rand::prelude::*;
+use std::error::Error;
+//use std::fmt::{Display, Formatter};
+//use std::fmt;
+use std::path::Path;
+use std::sync::Arc;
 use std::time::SystemTime;
-use tch::nn::{Optimizer, Adam};
+
+use gio::prelude::*;
 //use gtk::{Builder, Application, Window, Button};
 use gtk::{Application, ApplicationWindow, Button};
-use self::gtk::{GridBuilder, Builder, Window, Grid};
-use std::sync::Arc;
-use std::borrow::Borrow;
-use std::path::Path;
-use crate::field::{Field, SIZE, scrambled, example};
+use gtk::prelude::*;
+use rand::Rng;
+use tch;
+use tch::{Device, get_num_interop_threads, get_num_threads, kind, Kind, nn, no_grad, set_num_interop_threads, set_num_threads, Tensor, vision};
+use tch::{nn::Module, nn::OptimizerConfig};
+use tch::nn::{Adam, Optimizer};
 
+use crate::field::{example, Field, scrambled, SIZE};
+
+use self::gtk::{Builder, Grid, GridBuilder, Window};
+use self::rand::prelude::*;
 
 // SIZE=3
 // epoch: 39500 train loss:  0.03214 err=327 rate=98 sec=381
