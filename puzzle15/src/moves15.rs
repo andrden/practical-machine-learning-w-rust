@@ -36,7 +36,7 @@ const MODEL_STORE_PATH: &str = "puzzle15.ot";
 static FEATURE_DIM: i64 = (16/*one-hot*/ * SIZE * SIZE) as i64;
 //static HIDDEN_NODES: i64 = 5000;
 static HIDDEN_NODES: i64 = 4096;
-static HIDDEN_NODES2: i64 = 512;
+static HIDDEN_NODES2: i64 = 1024;
 // static HIDDEN_NODES3: i64 = 128;
 // 128 - 64 epoch: 140000 train loss:  0.22475 err=13921 rate=88 sec=442
 // 128-128 epoch: 140000 train loss:  0.18137 err=11954 rate=89 sec=491
@@ -210,7 +210,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     let (batches, train_size, _best_moves) = prepare_train_data(5_900_000);
 
     let now = SystemTime::now();
-    for epoch in 1..=80000 {
+    for epoch in 1..=110_000 {
         let batch = &batches[epoch % batches.len()];
         let loss = net
             .forward(&batch.x.to_device(Device::cuda_if_available()))
