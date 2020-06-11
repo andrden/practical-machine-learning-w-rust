@@ -210,14 +210,16 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     let (batches, train_size, _best_moves) = prepare_train_data(5_900_000);
 
     let now = SystemTime::now();
-    let mut sumLoss = 0.;
+    let mut sum_loss = 0.;
     for epoch in 1..=220_000 {
         let batch = &batches[epoch % batches.len()];
         let loss = net
             .forward(&batch.x.to_device(Device::cuda_if_available()))
             .cross_entropy_for_logits(&batch.y.to_device(Device::cuda_if_available()));
-        sumLoss += f64::from(&loss);
+        sum_loss += f64::from(&loss);
         opt.backward_step(&loss);
+        //opt.set_lr(1e-2);
+
         // let loss = net
         //     .forward(&flower_x_train)
         //     .cross_entropy_for_logits(&flower_y_train);
@@ -236,15 +238,15 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
             // }
             println!(
                 //"epoch: {:4} train loss: {:8.5} test acc: {:5.2}%",
-                "epoch: {:4} train loss: {:8.5} sumLoss={} err={} rate={:5.2} sec={}",
+                "epoch: {:4} train loss: {:8.5} sum_loss={} err={} rate={:5.2} sec={}",
                 epoch,
                 f64::from(&loss),
-                sumLoss,
+                sum_loss,
                 train_size - ok,//100. * f64::from(&test_accuracy),
                 100f32 * ok as f32 / train_size as f32,
                 now.elapsed().unwrap().as_secs(),
             );
-            sumLoss = 0.;
+            sum_loss = 0.;
         }
     };
 }
@@ -259,11 +261,15 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let net = net(&vs.root());
 //    println!("scrambled \n{}", scrambled());
 
+    let mut train_flag = Path::new("train.more").exists();
     if Path::new(MODEL_STORE_PATH).exists() {
         println!("pre-trained model found in file {}", MODEL_STORE_PATH);
         vs.load(MODEL_STORE_PATH)?;
         println!("pre-trained model loaded from file {}", MODEL_STORE_PATH);
     } else {
+        train_flag = true;
+    }
+    if train_flag {
         println!("training, then saving as {}", MODEL_STORE_PATH);
         let opt = nn::Adam::default().build(&vs, 1e-3)?;
         train(opt, &net);
