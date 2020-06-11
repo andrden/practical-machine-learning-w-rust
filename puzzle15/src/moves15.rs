@@ -36,7 +36,7 @@ const MODEL_STORE_PATH: &str = "puzzle15.ot";
 static FEATURE_DIM: i64 = (16/*one-hot*/ * SIZE * SIZE) as i64;
 //static HIDDEN_NODES: i64 = 5000;
 static HIDDEN_NODES: i64 = 4096;
-static HIDDEN_NODES2: i64 = 256;
+static HIDDEN_NODES2: i64 = 512;
 // static HIDDEN_NODES3: i64 = 128;
 // 128 - 64 epoch: 140000 train loss:  0.22475 err=13921 rate=88 sec=442
 // 128-128 epoch: 140000 train loss:  0.18137 err=11954 rate=89 sec=491
