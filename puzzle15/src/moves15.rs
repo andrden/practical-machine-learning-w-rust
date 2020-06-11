@@ -110,7 +110,7 @@ struct MiniBatch {
     y: Tensor,
 }
 
-fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
+fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
     let field_init = Field::new();
     if !field_init.is_solvable() {
         panic!("not solvable1");
@@ -151,7 +151,7 @@ fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<us
     let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
     let mut rng: StdRng = SeedableRng::from_seed(seed);
     xy.shuffle(&mut rng);
-    let xy = &xy[0..take];
+    //let xy = &xy[0..take];
 
     //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.cells.iter().map(|v| *v as f32)).collect();
     //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.features()).collect();
@@ -184,8 +184,8 @@ fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<us
         let x = Tensor::of_slice(&x_train_batch[begx..endx]);
         let y = Tensor::of_slice(&y_train_batch[beg..end]).to_kind(Kind::Int64);
 
-        let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM)).to_device(Device::cuda_if_available());
-        let flower_y_train = y.view(BATCH_SIZE).to_device(Device::cuda_if_available());
+        let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM));//.to_device(Device::cuda_if_available());
+        let flower_y_train = y.view(BATCH_SIZE);//.to_device(Device::cuda_if_available());
         batches.push(MiniBatch { x: flower_x_train, y: flower_y_train });
     }
     // let x = Tensor::of_slice(x_train.as_slice());
@@ -200,14 +200,14 @@ fn prepare_train_data(steps: usize, take: usize) -> (Vec<MiniBatch>, i64, Vec<us
 }
 
 fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
-    let (batches, train_size, _best_moves) = prepare_train_data(14_900_000, 7_000_000);
+    let (batches, train_size, _best_moves) = prepare_train_data(14_900_000);
 
     let now = SystemTime::now();
     for epoch in 1..=80000 {
         let batch = &batches[epoch % batches.len()];
         let loss = net
-            .forward(&batch.x)
-            .cross_entropy_for_logits(&batch.y);
+            .forward(&batch.x.to_device(Device::cuda_if_available()))
+            .cross_entropy_for_logits(&batch.y.to_device(Device::cuda_if_available()));
         opt.backward_step(&loss);
         // let loss = net
         //     .forward(&flower_x_train)
