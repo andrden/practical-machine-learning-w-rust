@@ -163,7 +163,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
     //println!("{:?}", y_train);
     let train_size = xy.len() as i64; // (best_moves.len() - 1) as i64;
     let mut batches = Vec::new();
-    const BATCH_SIZE: i64 = 256; //512 3x3: 700 sec, 94%  rate=93 sec=387
+    const BATCH_SIZE: i64 = 128; //512 3x3: 700 sec, 94%  rate=93 sec=387
 
     // let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
     // let mut rng: StdRng = SeedableRng::from_seed(seed);
