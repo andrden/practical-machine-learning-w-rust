@@ -24,7 +24,7 @@ impl Field {
         if to == from - 1 {
             return 1;
         }
-        if t0 < from {
+        if to < from {
             return 2;
         }
         return 3;
