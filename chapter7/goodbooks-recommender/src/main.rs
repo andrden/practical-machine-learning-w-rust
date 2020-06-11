@@ -211,7 +211,10 @@ fn serialize_model(model: &ImplicitEWMAModel,
     Ok(serde_json::to_writer(&mut writer, model)?)
 }
 
-
+// #[allow()]
+// fn a(){
+//
+// }
 
 /// Download training data and build a model.
 ///
