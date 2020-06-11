@@ -145,7 +145,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
     }
     println!("vec len {}", explored_vec.len());
     //for i in 0..exploredVec.len() {
-    for i in explored_vec.len() - 10..explored_vec.len() {
+    for i in explored_vec.len() - 5..explored_vec.len() {
         let f = &explored_vec[i];
         println!("{} best move {}", f, best_moves[i]);
     }
@@ -179,6 +179,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
         x_train_batch.append(&mut xi);
         y_train_batch.push(*xyi.1 as f32);
     }
+    println!("making batches");
     for i in 0..train_size / BATCH_SIZE {
         let beg = (i * BATCH_SIZE) as usize;
         let end = beg + BATCH_SIZE as usize;
@@ -203,7 +204,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
 }
 
 fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
-    let (batches, train_size, _best_moves) = prepare_train_data(10_900_000);
+    let (batches, train_size, _best_moves) = prepare_train_data(8_900_000);
 
     let now = SystemTime::now();
     for epoch in 1..=80000 {
