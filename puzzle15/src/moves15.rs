@@ -163,7 +163,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
     //println!("{:?}", y_train);
     let train_size = xy.len() as i64; // (best_moves.len() - 1) as i64;
     let mut batches = Vec::new();
-    const BATCH_SIZE: i64 = 512; //512 3x3: 700 sec, 94%  rate=93 sec=387
+    const BATCH_SIZE: i64 = 256; //512 3x3: 700 sec, 94%  rate=93 sec=387
 
     // let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
     // let mut rng: StdRng = SeedableRng::from_seed(seed);
@@ -210,11 +210,13 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     let (batches, train_size, _best_moves) = prepare_train_data(5_900_000);
 
     let now = SystemTime::now();
-    for epoch in 1..=110_000 {
+    let mut sumLoss = 0.;
+    for epoch in 1..=220_000 {
         let batch = &batches[epoch % batches.len()];
         let loss = net
             .forward(&batch.x.to_device(Device::cuda_if_available()))
             .cross_entropy_for_logits(&batch.y.to_device(Device::cuda_if_available()));
+        sumLoss += f64::from(&loss);
         opt.backward_step(&loss);
         // let loss = net
         //     .forward(&flower_x_train)
@@ -234,13 +236,15 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
             // }
             println!(
                 //"epoch: {:4} train loss: {:8.5} test acc: {:5.2}%",
-                "epoch: {:4} train loss: {:8.5} err={} rate={:5.2} sec={}",
+                "epoch: {:4} train loss: {:8.5} sumLoss={} err={} rate={:5.2} sec={}",
                 epoch,
                 f64::from(&loss),
+                sumLoss,
                 train_size - ok,//100. * f64::from(&test_accuracy),
                 100f32 * ok as f32 / train_size as f32,
                 now.elapsed().unwrap().as_secs(),
             );
+            sumLoss = 0.;
         }
     };
 }
