@@ -35,7 +35,7 @@ const MODEL_STORE_PATH: &str = "puzzle15.ot";
 
 static FEATURE_DIM: i64 = (2/* plus back-refs */ * 16/* one-hot */ * SIZE * SIZE) as i64;
 //static HIDDEN_NODES: i64 = 5000;
-static HIDDEN_NODES: i64 = 2048;
+static HIDDEN_NODES: i64 = 2048*8;
 //static HIDDEN_NODES2: i64 = 1024;
 // static HIDDEN_NODES3: i64 = 128;
 // 128 - 64 epoch: 140000 train loss:  0.22475 err=13921 rate=88 sec=442
@@ -114,7 +114,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64) {
     let (train_size, x_train_batch, y_train_batch) = prepare_features(steps);
 
     let mut batches = Vec::new();
-    const BATCH_SIZE: i64 = 128; //512 3x3: 700 sec, 94%  rate=93 sec=387
+    const BATCH_SIZE: i64 = 64; //512 3x3: 700 sec, 94%  rate=93 sec=387
     println!("making batches");
     for i in 0..train_size / BATCH_SIZE {
         if i % 1_000 == 0 {
@@ -223,7 +223,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     //let (batches, train_size) = prepare_train_data(5_900_000);
     let (train_size, x_train_batch, y_train_batch) = prepare_features(5_900_000);
 
-    const BATCH_SIZE: i64 = 4096;
+    const BATCH_SIZE: i64 = 64;
 
     let now = SystemTime::now();
     let mut sum_loss = 0.;
