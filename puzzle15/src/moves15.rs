@@ -34,8 +34,12 @@ use self::rand::prelude::*;
 const MODEL_STORE_PATH: &str = "puzzle15.ot";
 
 static FEATURE_DIM: i64 = (2/* plus back-refs */ * 16/* one-hot */ * SIZE * SIZE) as i64;
-//static HIDDEN_NODES: i64 = 5000;
+
 static HIDDEN_NODES: i64 = 2048*8;
+// tried single layer of hidden nodes sized 16k - works worse than single layer with 2k nodes for first 10 minutes of training,
+// then outperforms the smaller layer drastically
+
+
 //static HIDDEN_NODES2: i64 = 1024;
 // static HIDDEN_NODES3: i64 = 128;
 // 128 - 64 epoch: 140000 train loss:  0.22475 err=13921 rate=88 sec=442
@@ -230,7 +234,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     let mut batch_num = 0i64;
     let batches_count = train_size / BATCH_SIZE;
     println!("batches count = {}", batches_count);
-    for epoch in 1..=220_000 {
+    for epoch in 1..=30_000 {
         let beg = (batch_num * BATCH_SIZE) as usize;
         let end = beg + BATCH_SIZE as usize;
         let begx = (beg * FEATURE_DIM as usize) as usize;
