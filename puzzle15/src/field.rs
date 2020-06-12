@@ -252,6 +252,7 @@ pub fn examples() -> Vec<Field> {
     vec![
         scrambled(), // solved in 187 steps
         Field::new_with_cells([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15]),
+        Field::new_with_cells([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 13, 14, 15]),
         Field::new_with_cells([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 13, 14, 0]), // solved in 17 moves
         Field::new_with_cells([2, 4, 1, 5, 6, 9, 10, 12, 7, 14, 11, 3, 13, 0, 8, 15]), // example not solvable
         Field::new_with_cells([4, 10, 11, 5, 15, 7, 9, 3, 12, 8, 13, 14, 2, 1, 6, 16]), // example not solvable
