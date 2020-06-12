@@ -110,37 +110,37 @@ struct MiniBatch {
     y: Tensor,
 }
 
-fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64) {
-    let (train_size, x_train_batch, y_train_batch) = prepare_features(steps);
-
-    let mut batches = Vec::new();
-    const BATCH_SIZE: i64 = 256; //512 3x3: 700 sec, 94%  rate=93 sec=387
-    println!("making batches");
-    for i in 0..train_size / BATCH_SIZE {
-        if i % 1_000 == 0 {
-            println!("making batches train size {} batches={}", train_size, batches.len());
-        }
-        let beg = (i * BATCH_SIZE) as usize;
-        let end = beg + BATCH_SIZE as usize;
-        let begx = (beg * FEATURE_DIM as usize) as usize;
-        let endx = ((beg + BATCH_SIZE as usize) * FEATURE_DIM as usize) as usize;
-        let x = Tensor::of_slice(&x_train_batch[begx..endx]);
-        let y = Tensor::of_slice(&y_train_batch[beg..end]).to_kind(Kind::Int64);
-
-        let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM));//.to_device(Device::cuda_if_available());
-        let flower_y_train = y.view(BATCH_SIZE);//.to_device(Device::cuda_if_available());
-        batches.push(MiniBatch { x: flower_x_train, y: flower_y_train });
-    }
-    // let x = Tensor::of_slice(x_train.as_slice());
-    // let y = Tensor::of_slice(y_train.as_slice()).to_kind(Kind::Int64);
-
-    // let flower_x_train = x.view((train_size, FEATURE_DIM));
-    // let flower_y_train = y.view(train_size);
-    println!("train size {} threads={},interop={} CUDA_avail={}", train_size, get_num_threads(), get_num_interop_threads(), tch::Cuda::is_available());
-    println!("train size {} batches={}", train_size, batches.len());
-
-    (batches, train_size)
-}
+// fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64) {
+//     let (train_size, x_train_batch, y_train_batch) = prepare_features(steps);
+//
+//     let mut batches = Vec::new();
+//     const BATCH_SIZE: i64 = 256; //512 3x3: 700 sec, 94%  rate=93 sec=387
+//     println!("making batches");
+//     for i in 0..train_size / BATCH_SIZE {
+//         if i % 1_000 == 0 {
+//             println!("making batches train size {} batches={}", train_size, batches.len());
+//         }
+//         let beg = (i * BATCH_SIZE) as usize;
+//         let end = beg + BATCH_SIZE as usize;
+//         let begx = (beg * FEATURE_DIM as usize) as usize;
+//         let endx = ((beg + BATCH_SIZE as usize) * FEATURE_DIM as usize) as usize;
+//         let x = Tensor::of_slice(&x_train_batch[begx..endx]);
+//         let y = Tensor::of_slice(&y_train_batch[beg..end]).to_kind(Kind::Int64);
+//
+//         let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM));//.to_device(Device::cuda_if_available());
+//         let flower_y_train = y.view(BATCH_SIZE);//.to_device(Device::cuda_if_available());
+//         batches.push(MiniBatch { x: flower_x_train, y: flower_y_train });
+//     }
+//     // let x = Tensor::of_slice(x_train.as_slice());
+//     // let y = Tensor::of_slice(y_train.as_slice()).to_kind(Kind::Int64);
+//
+//     // let flower_x_train = x.view((train_size, FEATURE_DIM));
+//     // let flower_y_train = y.view(train_size);
+//     println!("train size {} threads={},interop={} CUDA_avail={}", train_size, get_num_threads(), get_num_interop_threads(), tch::Cuda::is_available());
+//     println!("train size {} batches={}", train_size, batches.len());
+//
+//     (batches, train_size)
+// }
 
 fn prepare_features(steps: usize) -> (i64, Vec<f32>, Vec<f32>) {
     let mut xy = compute_train_data(steps);
@@ -223,7 +223,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     //let (batches, train_size) = prepare_train_data(5_900_000);
     let (train_size, x_train_batch, y_train_batch) = prepare_features(5_900_000);
 
-    const BATCH_SIZE: i64 = 64;
+    const BATCH_SIZE: i64 = 512;
 
     let now = SystemTime::now();
     let mut sum_loss = 0.;
