@@ -33,10 +33,10 @@ use self::rand::prelude::*;
 
 const MODEL_STORE_PATH: &str = "puzzle15.ot";
 
-static FEATURE_DIM: i64 = (16/*one-hot*/ * SIZE * SIZE) as i64;
+static FEATURE_DIM: i64 = (2/* plus back-refs */ * 16/* one-hot */ * SIZE * SIZE) as i64;
 //static HIDDEN_NODES: i64 = 5000;
-static HIDDEN_NODES: i64 = 4096;
-static HIDDEN_NODES2: i64 = 1024;
+static HIDDEN_NODES: i64 = 2048;
+//static HIDDEN_NODES2: i64 = 1024;
 // static HIDDEN_NODES3: i64 = 128;
 // 128 - 64 epoch: 140000 train loss:  0.22475 err=13921 rate=88 sec=442
 // 128-128 epoch: 140000 train loss:  0.18137 err=11954 rate=89 sec=491
@@ -67,11 +67,11 @@ fn net(vs: &nn::Path) -> impl Module {
     nn::seq()
         .add(nn::linear(vs / "layer1", FEATURE_DIM, HIDDEN_NODES, Default::default()))
         .add_fn(|xs| xs.relu())
-        .add(nn::linear(vs / "layer2", HIDDEN_NODES, HIDDEN_NODES2, Default::default()))
-        .add_fn(|xs| xs.leaky_relu())
+        // .add(nn::linear(vs / "layer2", HIDDEN_NODES, HIDDEN_NODES2, Default::default()))
+        // .add_fn(|xs| xs.leaky_relu())
         // .add(nn::linear(vs / "layer3", HIDDEN_NODES2, HIDDEN_NODES3, Default::default()))
         // .add_fn(|xs| xs.leaky_relu())
-        .add(nn::linear(vs, HIDDEN_NODES2, LABELS, Default::default()))
+        .add(nn::linear(vs, HIDDEN_NODES, LABELS, Default::default()))
 }
 
 // #[derive(Debug)]

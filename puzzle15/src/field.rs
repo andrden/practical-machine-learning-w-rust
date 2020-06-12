@@ -51,22 +51,32 @@ impl Field {
     pub fn features(&self) -> Vec<f32> {
         //let mut xi: Vec<f32> = (*xyi.0).cells.iter().map(|v| *v as f32).collect();
         let mut res: Vec<f32> = Vec::new();
-        for i in &self.cells {
-            for j in 0..16 {
-                if j == *i {
-                    res.push(1f32);
-                } else {
-                    res.push(0f32);
-                }
-            }
+        let back_ref = [0u8; SIZE * SIZE];
+        for (index, i) in &self.cells.iter().enumerate() {
+            back_ref[i] = index;
+            Field::one_hot16(&mut res, i);
             // let mut val = *i;
             // for _ in 0..4 { // 4 bits
             //     res.push((val % 2) as f32);
             //     val = val / 2;
             // }
         }
+        for i in back_ref {
+            Field::one_hot16(&mut res, i);
+        }
         res
     }
+
+    fn one_hot16(res: &mut Vec<f32>, i: &u8) -> () {
+        for j in 0..16 {
+            if j == *i {
+                res.push(1f32);
+            } else {
+                res.push(0f32);
+            }
+        }
+    }
+
     pub fn is_done(&self) -> bool {
         self.cells == Field::new().cells
     }
