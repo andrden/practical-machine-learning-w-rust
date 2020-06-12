@@ -51,9 +51,9 @@ impl Field {
     pub fn features(&self) -> Vec<f32> {
         //let mut xi: Vec<f32> = (*xyi.0).cells.iter().map(|v| *v as f32).collect();
         let mut res: Vec<f32> = Vec::new();
-        let back_ref = [0u8; SIZE * SIZE];
-        for (index, i) in &self.cells.iter().enumerate() {
-            back_ref[i] = index;
+        let mut back_ref = [0u8; SIZE * SIZE];
+        for (index, i) in self.cells.iter().enumerate() {
+            back_ref[*i as usize] = index as u8;
             Field::one_hot16(&mut res, i);
             // let mut val = *i;
             // for _ in 0..4 { // 4 bits
@@ -61,7 +61,7 @@ impl Field {
             //     val = val / 2;
             // }
         }
-        for i in back_ref {
+        for i in &back_ref {
             Field::one_hot16(&mut res, i);
         }
         res
