@@ -223,7 +223,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     //let (batches, train_size) = prepare_train_data(5_900_000);
     let (train_size, x_train_batch, y_train_batch) = prepare_features(5_900_000);
 
-    const BATCH_SIZE: i64 = 128;
+    const BATCH_SIZE: i64 = 64;
 
     let now = SystemTime::now();
     let mut sum_loss = 0.;
