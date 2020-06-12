@@ -111,37 +111,10 @@ struct MiniBatch {
 }
 
 fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64) {
-    let mut xy = compute_train_data(steps);
-    println!("done: compute_train_data {}=>{} ", steps, xy.len());
+    let (train_size, x_train_batch, y_train_batch) = prepare_features(steps);
 
-    let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
-    let mut rng: StdRng = SeedableRng::from_seed(seed);
-    xy.shuffle(&mut rng);
-    //let xy = &xy[0..take];
-
-    //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.cells.iter().map(|v| *v as f32)).collect();
-    //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.features()).collect();
-    //println!("{:?}", x_train);
-    //let y_train: Vec<f32> = best_moves.iter().skip(1).map(|m| *m as f32).collect();
-    //println!("{:?}", y_train);
-    let train_size = xy.len() as i64; // (best_moves.len() - 1) as i64;
     let mut batches = Vec::new();
     const BATCH_SIZE: i64 = 128; //512 3x3: 700 sec, 94%  rate=93 sec=387
-
-    // let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
-    // let mut rng: StdRng = SeedableRng::from_seed(seed);
-    // let mut x_train_batch = x_train.clone();
-    // x_train_batch.shuffle(&rng);
-    // let mut y_train_batch = y_train.clone();
-    // y_train_batch.shuffle(&rng);
-    let mut x_train_batch: Vec<f32> = Vec::new();
-    let mut y_train_batch: Vec<f32> = Vec::new();
-    for xyi in xy {
-        //let mut xi: Vec<f32> = (*xyi.0).cells.iter().map(|v| *v as f32).collect();
-        let mut xi: Vec<f32> = (xyi.0).features();
-        x_train_batch.append(&mut xi);
-        y_train_batch.push(xyi.1 as f32);
-    }
     println!("making batches");
     for i in 0..train_size / BATCH_SIZE {
         if i % 1_000 == 0 {
@@ -167,6 +140,37 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64) {
     println!("train size {} batches={}", train_size, batches.len());
 
     (batches, train_size)
+}
+
+fn prepare_features(steps: usize) -> (i64, Vec<f32>, Vec<f32>) {
+    let mut xy = compute_train_data(steps);
+    println!("done: compute_train_data {}=>{} ", steps, xy.len());
+    let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
+    let mut rng: StdRng = SeedableRng::from_seed(seed);
+    xy.shuffle(&mut rng);
+//let xy = &xy[0..take];
+//let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.cells.iter().map(|v| *v as f32)).collect();
+//let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.features()).collect();
+//println!("{:?}", x_train);
+//let y_train: Vec<f32> = best_moves.iter().skip(1).map(|m| *m as f32).collect();
+//println!("{:?}", y_train);
+    let train_size = xy.len() as i64;
+// (best_moves.len() - 1) as i64;
+// let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
+// let mut rng: StdRng = SeedableRng::from_seed(seed);
+// let mut x_train_batch = x_train.clone();
+// x_train_batch.shuffle(&rng);
+// let mut y_train_batch = y_train.clone();
+// y_train_batch.shuffle(&rng);
+    let mut x_train_batch: Vec<f32> = Vec::new();
+    let mut y_train_batch: Vec<f32> = Vec::new();
+    for xyi in xy {
+        //let mut xi: Vec<f32> = (*xyi.0).cells.iter().map(|v| *v as f32).collect();
+        let mut xi: Vec<f32> = (xyi.0).features();
+        x_train_batch.append(&mut xi);
+        y_train_batch.push(xyi.1 as f32);
+    }
+    (train_size, x_train_batch, y_train_batch)
 }
 
 fn compute_train_data(steps: usize) -> Vec<(Field, usize)> {
@@ -216,12 +220,30 @@ fn compute_train_data(steps: usize) -> Vec<(Field, usize)> {
 }
 
 fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
-    let (batches, train_size) = prepare_train_data(5_900_000);
+    //let (batches, train_size) = prepare_train_data(5_900_000);
+    let (train_size, x_train_batch, y_train_batch) = prepare_features(5_900_000);
+
+    const BATCH_SIZE: i64 = 128;
 
     let now = SystemTime::now();
     let mut sum_loss = 0.;
+    let mut batch_num = 0i64;
+    let batches_count = train_size / BATCH_SIZE;
+    println!("batches count = {}", batches_count);
     for epoch in 1..=220_000 {
-        let batch = &batches[epoch % batches.len()];
+        let beg = (batch_num * BATCH_SIZE) as usize;
+        let end = beg + BATCH_SIZE as usize;
+        let begx = (beg * FEATURE_DIM as usize) as usize;
+        let endx = ((beg + BATCH_SIZE as usize) * FEATURE_DIM as usize) as usize;
+        let x = Tensor::of_slice(&x_train_batch[begx..endx]);
+        let y = Tensor::of_slice(&y_train_batch[beg..end]).to_kind(Kind::Int64);
+
+        let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM));//.to_device(Device::cuda_if_available());
+        let flower_y_train = y.view(BATCH_SIZE);//.to_device(Device::cuda_if_available());
+        let batch = MiniBatch { x: flower_x_train, y: flower_y_train };
+        batch_num = (batch_num + 1) % batches_count;
+
+        //let batch = &batches[epoch % batches.len()];
         let loss = net
             .forward(&batch.x.to_device(Device::cuda_if_available()))
             .cross_entropy_for_logits(&batch.y.to_device(Device::cuda_if_available()));
