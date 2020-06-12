@@ -110,7 +110,66 @@ struct MiniBatch {
     y: Tensor,
 }
 
-fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
+fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64) {
+    let mut xy = compute_train_data(steps);
+    println!("done: compute_train_data {}=>{} ", steps, xy.len());
+
+    let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
+    let mut rng: StdRng = SeedableRng::from_seed(seed);
+    xy.shuffle(&mut rng);
+    //let xy = &xy[0..take];
+
+    //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.cells.iter().map(|v| *v as f32)).collect();
+    //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.features()).collect();
+    //println!("{:?}", x_train);
+    //let y_train: Vec<f32> = best_moves.iter().skip(1).map(|m| *m as f32).collect();
+    //println!("{:?}", y_train);
+    let train_size = xy.len() as i64; // (best_moves.len() - 1) as i64;
+    let mut batches = Vec::new();
+    const BATCH_SIZE: i64 = 128; //512 3x3: 700 sec, 94%  rate=93 sec=387
+
+    // let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
+    // let mut rng: StdRng = SeedableRng::from_seed(seed);
+    // let mut x_train_batch = x_train.clone();
+    // x_train_batch.shuffle(&rng);
+    // let mut y_train_batch = y_train.clone();
+    // y_train_batch.shuffle(&rng);
+    let mut x_train_batch: Vec<f32> = Vec::new();
+    let mut y_train_batch: Vec<f32> = Vec::new();
+    for xyi in xy {
+        //let mut xi: Vec<f32> = (*xyi.0).cells.iter().map(|v| *v as f32).collect();
+        let mut xi: Vec<f32> = (xyi.0).features();
+        x_train_batch.append(&mut xi);
+        y_train_batch.push(xyi.1 as f32);
+    }
+    println!("making batches");
+    for i in 0..train_size / BATCH_SIZE {
+        if i % 1_000 == 0 {
+            println!("making batches train size {} batches={}", train_size, batches.len());
+        }
+        let beg = (i * BATCH_SIZE) as usize;
+        let end = beg + BATCH_SIZE as usize;
+        let begx = (beg * FEATURE_DIM as usize) as usize;
+        let endx = ((beg + BATCH_SIZE as usize) * FEATURE_DIM as usize) as usize;
+        let x = Tensor::of_slice(&x_train_batch[begx..endx]);
+        let y = Tensor::of_slice(&y_train_batch[beg..end]).to_kind(Kind::Int64);
+
+        let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM));//.to_device(Device::cuda_if_available());
+        let flower_y_train = y.view(BATCH_SIZE);//.to_device(Device::cuda_if_available());
+        batches.push(MiniBatch { x: flower_x_train, y: flower_y_train });
+    }
+    // let x = Tensor::of_slice(x_train.as_slice());
+    // let y = Tensor::of_slice(y_train.as_slice()).to_kind(Kind::Int64);
+
+    // let flower_x_train = x.view((train_size, FEATURE_DIM));
+    // let flower_y_train = y.view(train_size);
+    println!("train size {} threads={},interop={} CUDA_avail={}", train_size, get_num_threads(), get_num_interop_threads(), tch::Cuda::is_available());
+    println!("train size {} batches={}", train_size, batches.len());
+
+    (batches, train_size)
+}
+
+fn compute_train_data(steps: usize) -> Vec<(Field, usize)> {
     let field_init = Field::new();
     if !field_init.is_solvable() {
         panic!("not solvable1");
@@ -144,70 +203,20 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64, Vec<usize>) {
         }
     }
     println!("vec len {}", explored_vec.len());
-    //for i in 0..exploredVec.len() {
+//for i in 0..exploredVec.len() {
     for i in explored_vec.len() - 5..explored_vec.len() {
         let f = &explored_vec[i];
         println!("{} best move {}", f, best_moves[i]);
     }
-
-    let mut xy: Vec<_> = explored_vec.iter().zip(best_moves.iter()).skip(1).collect();
-    let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
-    let mut rng: StdRng = SeedableRng::from_seed(seed);
-    xy.shuffle(&mut rng);
-    //let xy = &xy[0..take];
-
-    //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.cells.iter().map(|v| *v as f32)).collect();
-    //let x_train: Vec<f32> = exploredVec.iter().skip(1).flat_map(|f| f.features()).collect();
-    //println!("{:?}", x_train);
-    //let y_train: Vec<f32> = best_moves.iter().skip(1).map(|m| *m as f32).collect();
-    //println!("{:?}", y_train);
-    let train_size = xy.len() as i64; // (best_moves.len() - 1) as i64;
-    let mut batches = Vec::new();
-    const BATCH_SIZE: i64 = 128; //512 3x3: 700 sec, 94%  rate=93 sec=387
-
-    // let seed: [u8; 32] = b"123456789012345678901234567890AA".clone();
-    // let mut rng: StdRng = SeedableRng::from_seed(seed);
-    // let mut x_train_batch = x_train.clone();
-    // x_train_batch.shuffle(&rng);
-    // let mut y_train_batch = y_train.clone();
-    // y_train_batch.shuffle(&rng);
-    let mut x_train_batch: Vec<f32> = Vec::new();
-    let mut y_train_batch: Vec<f32> = Vec::new();
-    for xyi in xy {
-        //let mut xi: Vec<f32> = (*xyi.0).cells.iter().map(|v| *v as f32).collect();
-        let mut xi: Vec<f32> = (*xyi.0).features();
-        x_train_batch.append(&mut xi);
-        y_train_batch.push(*xyi.1 as f32);
-    }
-    println!("making batches");
-    for i in 0..train_size / BATCH_SIZE {
-        if i % 1_000 == 0 {
-            println!("making batches train size {} batches={}", train_size, batches.len());
-        }
-        let beg = (i * BATCH_SIZE) as usize;
-        let end = beg + BATCH_SIZE as usize;
-        let begx = (beg * FEATURE_DIM as usize) as usize;
-        let endx = ((beg + BATCH_SIZE as usize) * FEATURE_DIM as usize) as usize;
-        let x = Tensor::of_slice(&x_train_batch[begx..endx]);
-        let y = Tensor::of_slice(&y_train_batch[beg..end]).to_kind(Kind::Int64);
-
-        let flower_x_train = x.view((BATCH_SIZE, FEATURE_DIM));//.to_device(Device::cuda_if_available());
-        let flower_y_train = y.view(BATCH_SIZE);//.to_device(Device::cuda_if_available());
-        batches.push(MiniBatch { x: flower_x_train, y: flower_y_train });
-    }
-    // let x = Tensor::of_slice(x_train.as_slice());
-    // let y = Tensor::of_slice(y_train.as_slice()).to_kind(Kind::Int64);
-
-    // let flower_x_train = x.view((train_size, FEATURE_DIM));
-    // let flower_y_train = y.view(train_size);
-    println!("train size {} threads={},interop={} CUDA_avail={}", train_size, get_num_threads(), get_num_interop_threads(), tch::Cuda::is_available());
-    println!("train size {} batches={}", train_size, batches.len());
-
-    (batches, train_size, best_moves)
+    let mut xy: Vec<(Field, usize)> = vec![];
+    for v in explored_vec.iter().zip(best_moves.iter()).skip(1) {
+        xy.push((v.0.clone(), *v.1));
+    };
+    xy
 }
 
 fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
-    let (batches, train_size, _best_moves) = prepare_train_data(5_900_000);
+    let (batches, train_size) = prepare_train_data(5_900_000);
 
     let now = SystemTime::now();
     let mut sum_loss = 0.;
