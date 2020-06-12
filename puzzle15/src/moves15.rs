@@ -114,7 +114,7 @@ fn prepare_train_data(steps: usize) -> (Vec<MiniBatch>, i64) {
     let (train_size, x_train_batch, y_train_batch) = prepare_features(steps);
 
     let mut batches = Vec::new();
-    const BATCH_SIZE: i64 = 64; //512 3x3: 700 sec, 94%  rate=93 sec=387
+    const BATCH_SIZE: i64 = 256; //512 3x3: 700 sec, 94%  rate=93 sec=387
     println!("making batches");
     for i in 0..train_size / BATCH_SIZE {
         if i % 1_000 == 0 {
