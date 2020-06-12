@@ -235,6 +235,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     let batches_count = train_size / BATCH_SIZE;
     println!("batches count = {}", batches_count);
     for epoch in 1..=30_000 {
+        // trained for total of 120K epochs for over 3 hours on GPU Amazon
         let beg = (batch_num * BATCH_SIZE) as usize;
         let end = beg + BATCH_SIZE as usize;
         let begx = (beg * FEATURE_DIM as usize) as usize;
@@ -525,7 +526,7 @@ fn build_ui(application: &gtk::Application) {
     grid.attach(&solve_btn, 50 * 5, 0, 50, 20);
     let arc_btns_copy3 = arc_btns.clone();
     solve_btn.connect_clicked(move |b: &Button| {
-        let solvable = solve(&net, field_from_buttons(&arc_btns_copy3), 50, true);
+        let solvable = solve(&net, field_from_buttons(&arc_btns_copy3), 100, true);
 
         let mut field = field_from_buttons(&arc_btns_copy3);
         let moves = field.moves();

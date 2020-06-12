@@ -250,26 +250,28 @@ pub fn scrambled() -> Field {
 
 pub fn examples() -> Vec<Field> {
     vec![
-        scrambled(), // solved in 187 steps
+        scrambled(), // solved in 187 steps => 79 in 16k-net
         Field::new_with_cells([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15]),
         Field::new_with_cells([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 13, 14, 15]),
+        Field::new_with_cells([0, 5, 3, 7, 2, 11, 4, 8, 1, 13, 6, 15, 10, 9, 12, 14]), // 30
+        Field::new_with_cells([3, 2, 8, 4, 5, 6, 7, 14, 1, 10, 11, 12, 13, 9, 15, 0]), // 85 (actually can be solved in about 60 moves)
         Field::new_with_cells([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 13, 14, 0]), // solved in 17 moves
         Field::new_with_cells([2, 4, 1, 5, 6, 9, 10, 12, 7, 14, 11, 3, 13, 0, 8, 15]), // example not solvable
         Field::new_with_cells([4, 10, 11, 5, 15, 7, 9, 3, 12, 8, 13, 14, 2, 1, 6, 16]), // example not solvable
-        Field::new_with_cells([1, 5, 8, 0, 11, 7, 13, 14, 9, 12, 10, 2, 3, 6, 4, 15]), // 102 moves
-        Field::new_with_cells([1, 8, 15, 5, 6, 11, 12, 13, 9, 0, 3, 4, 10, 7, 2, 14]), // 160 moves
+        Field::new_with_cells([1, 5, 8, 0, 11, 7, 13, 14, 9, 12, 10, 2, 3, 6, 4, 15]), // 102 moves => 74 in 16k-net
+        Field::new_with_cells([1, 8, 15, 5, 6, 11, 12, 13, 9, 0, 3, 4, 10, 7, 2, 14]), // 160 moves => 62 in 16k-net
         Field::new_with_cells([ //- unsolvable, broken?
             15, 14, 8, 12,
             10, 11, 9, 13,
             2, 6, 5, 1,
             3, 7, 4, 0]),
-        Field::new_with_cells([ // solved in 119 moves
+        Field::new_with_cells([ // solved in 119 moves => 125 in 16k-net
             14, 15, 8, 12,
             10, 11, 9, 13,
             2, 6, 5, 1,
             3, 7, 4, 0]),
         Field::new_with_cells([ // solved in 201 moves,   https://www.jaapsch.net/puzzles/javascript/fifteenj.htm solves it in 184 (or 194) moves
-            0, 12, 10, 13,
+            0, 12, 10, 13, // => 109 in 16k-net
             15, 11, 14, 9,
             7, 8, 6, 2,
             4, 3, 5, 1])]
