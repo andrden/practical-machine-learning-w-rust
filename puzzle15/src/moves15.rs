@@ -2,6 +2,10 @@ extern crate gio;
 extern crate gtk;
 extern crate rand;
 
+use std::fs::File;
+use std::io::BufRead;
+
+
 //use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::error::Error;
@@ -25,6 +29,7 @@ use crate::field::{Field, SIZE, examples};
 
 use self::gtk::{Grid, GridBuilder, Button};
 use self::rand::prelude::*;
+use std::io;
 
 // SIZE=3
 // epoch: 39500 train loss:  0.03214 err=327 rate=98 sec=381
@@ -35,7 +40,7 @@ const MODEL_STORE_PATH: &str = "puzzle15.ot";
 
 static FEATURE_DIM: i64 = (2/* plus back-refs */ * 16/* one-hot */ * SIZE * SIZE) as i64;
 
-static HIDDEN_NODES: i64 = 2048*8;
+static HIDDEN_NODES: i64 = 2048 * 8;
 // tried single layer of hidden nodes sized 16k - works worse than single layer with 2k nodes for first 10 minutes of training,
 // then outperforms the smaller layer drastically
 
@@ -234,8 +239,7 @@ fn train(mut opt: Optimizer<Adam>, net: &impl Module) {
     let mut batch_num = 0i64;
     let batches_count = train_size / BATCH_SIZE;
     println!("batches count = {}", batches_count);
-    for epoch in 1..=30_000 {
-        // trained for total of 120K epochs for over 3 hours on GPU Amazon
+    for epoch in 1..=30_000 { // actually trained for total of 120K epochs for over 3 hours on GPU Amazon
         let beg = (batch_num * BATCH_SIZE) as usize;
         let end = beg + BATCH_SIZE as usize;
         let begx = (beg * FEATURE_DIM as usize) as usize;
@@ -294,6 +298,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     // working on a linear neural network with SGD
     let mut vs = nn::VarStore::new(Device::cuda_if_available());
     //let net = Net::new(&vs.root());
+    mem_size();
     let net = net(&vs.root());
 //    println!("scrambled \n{}", scrambled());
 
@@ -301,6 +306,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     if Path::new(MODEL_STORE_PATH).exists() {
         println!("pre-trained model found in file {}", MODEL_STORE_PATH);
         vs.load(MODEL_STORE_PATH)?;
+        mem_size();
         println!("pre-trained model loaded from file {}", MODEL_STORE_PATH);
     } else {
         train_flag = true;
@@ -592,4 +598,15 @@ fn main_gui() {
 
     //application.run(&args().collect::<Vec<_>>());
     application.run(&[]);
+}
+
+fn mem_size() {
+    let file = File::open("/proc/self/status").unwrap();
+    for line in io::BufReader::new(file).lines() {
+        let string = line.unwrap();
+        //if string.to_lowercase().contains("vm") || string.to_lowercase().contains("rss") {
+        if string.contains("RssAnon") {
+            println!("proc status {}", string);
+        }
+    }
 }
